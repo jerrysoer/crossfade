@@ -1,6 +1,11 @@
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
-async function searchYouTube(query: string): Promise<string | null> {
+interface SearchOptions {
+  query: string;
+  videoCategoryId?: string;
+}
+
+async function searchYouTube({ query, videoCategoryId }: SearchOptions): Promise<string | null> {
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) {
     console.warn("YOUTUBE_API_KEY not set, skipping YouTube search");
@@ -8,16 +13,19 @@ async function searchYouTube(query: string): Promise<string | null> {
   }
 
   try {
-    const params = new URLSearchParams({
+    const params: Record<string, string> = {
       part: "snippet",
       q: query,
       type: "video",
       maxResults: "1",
-      order: "viewCount",
+      order: "relevance",
       key,
-    });
+    };
+    if (videoCategoryId) {
+      params.videoCategoryId = videoCategoryId;
+    }
 
-    const res = await fetch(`${YOUTUBE_API_BASE}/search?${params}`);
+    const res = await fetch(`${YOUTUBE_API_BASE}/search?${new URLSearchParams(params)}`);
     if (!res.ok) {
       console.warn(`YouTube search failed (${res.status}): ${query}`);
       return null;
@@ -32,10 +40,14 @@ async function searchYouTube(query: string): Promise<string | null> {
   }
 }
 
-export async function findFilmClip(artistName: string): Promise<string | null> {
-  return searchYouTube(`"${artistName}" movie scene OR trailer`);
+export async function findFilmClip(artistName: string, topFilmTitle?: string): Promise<string | null> {
+  const titlePart = topFilmTitle ? ` "${topFilmTitle}"` : "";
+  const query = `"${artistName}"${titlePart} trailer OR scene OR clip -karaoke -cover -reaction -remix -lyrics`;
+  return searchYouTube({ query, videoCategoryId: "24" });
 }
 
-export async function findMusicClip(artistName: string): Promise<string | null> {
-  return searchYouTube(`"${artistName}" official music video`);
+export async function findMusicClip(artistName: string, topMusicTitle?: string): Promise<string | null> {
+  const titlePart = topMusicTitle ? ` "${topMusicTitle}"` : "";
+  const query = `"${artistName}"${titlePart} official`;
+  return searchYouTube({ query, videoCategoryId: "10" });
 }

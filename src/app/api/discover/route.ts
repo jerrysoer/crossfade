@@ -107,14 +107,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Fetch credits + YouTube clips in parallel
-    let [combinedCredits, artistReleases, filmClipId, musicClipId] = await Promise.all([
+    // 5. Fetch credits first (need top titles for YouTube search)
+    let [combinedCredits, artistReleases] = await Promise.all([
       getPersonCombinedCredits(tmdbPerson.id),
       discogsResult
         ? getArtistReleases(discogsResult.id, 20)
         : Promise.resolve([]),
-      findFilmClip(claude.name),
-      findMusicClip(claude.discogsSearchQuery || claude.name),
     ]);
 
     // 5b. If Discogs artist found but has 0 releases, try name variants
@@ -138,6 +136,14 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // 5c. Search YouTube using top credit titles for accuracy
+    const topFilmTitle = combinedCredits[0]?.title || combinedCredits[0]?.name;
+    const topMusicTitle = artistReleases[0]?.title;
+    const [filmClipId, musicClipId] = await Promise.all([
+      findFilmClip(claude.name, topFilmTitle),
+      findMusicClip(claude.discogsSearchQuery || claude.name, topMusicTitle),
+    ]);
 
     // 6. Map to our types
     const filmCredits: FilmCredit[] = combinedCredits.slice(0, 5).map((c) => ({
