@@ -22,6 +22,7 @@ import {
   discogsArtistUrl,
   type DiscogsArtist,
 } from "@/lib/discogs";
+import { findFilmClip, findMusicClip } from "@/lib/youtube";
 import type {
   ClaudeCrossoverResponse,
   CrossoverArtist,
@@ -106,12 +107,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Fetch credits in parallel
-    let [combinedCredits, artistReleases] = await Promise.all([
+    // 5. Fetch credits + YouTube clips in parallel
+    let [combinedCredits, artistReleases, filmClipId, musicClipId] = await Promise.all([
       getPersonCombinedCredits(tmdbPerson.id),
       discogsResult
         ? getArtistReleases(discogsResult.id, 20)
         : Promise.resolve([]),
+      findFilmClip(claude.name),
+      findMusicClip(claude.discogsSearchQuery || claude.name),
     ]);
 
     // 5b. If Discogs artist found but has 0 releases, try name variants
@@ -234,6 +237,8 @@ export async function POST(request: NextRequest) {
       birthday: tmdbPerson.birthday ?? null,
       birthplace: tmdbPerson.place_of_birth ?? null,
       deathday: tmdbPerson.deathday ?? null,
+      filmClipId,
+      musicClipId,
     };
 
     return NextResponse.json(artist);

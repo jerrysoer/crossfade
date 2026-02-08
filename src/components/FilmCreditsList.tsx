@@ -1,15 +1,20 @@
 import Image from "next/image";
 import type { FilmCredit } from "@/lib/types";
+import YouTubeEmbed from "./YouTubeEmbed";
 
 interface FilmCreditsListProps {
   credits: FilmCredit[];
+  clipId?: string | null;
 }
 
-export default function FilmCreditsList({ credits }: FilmCreditsListProps) {
+export default function FilmCreditsList({ credits, clipId }: FilmCreditsListProps) {
   if (credits.length === 0) return null;
 
   return (
     <div className="w-full max-w-[280px]">
+      {/* YouTube clip */}
+      {clipId && <YouTubeEmbed videoId={clipId} />}
+
       {/* Section header */}
       <div className="flex items-center gap-3 mb-6">
         <h3 className="text-xs font-semibold tracking-[0.25em] uppercase text-[var(--accent-red)]">

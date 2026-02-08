@@ -36,6 +36,8 @@ export interface CrossoverArtist {
   birthday: string | null;
   birthplace: string | null;
   deathday: string | null;
+  filmClipId: string | null;
+  musicClipId: string | null;
 }
 
 export interface CreditTrivia {

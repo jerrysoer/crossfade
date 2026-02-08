@@ -59,7 +59,7 @@ export default function CrossoverCard({
             style={{ animationDelay: "0.3s" }}
           >
             {artist.filmCredits.length > 0 ? (
-              <FilmCreditsList credits={artist.filmCredits} />
+              <FilmCreditsList credits={artist.filmCredits} clipId={artist.filmClipId} />
             ) : (
               <EmptyCredits type="film" />
             )}
@@ -90,7 +90,7 @@ export default function CrossoverCard({
             style={{ animationDelay: "0.4s" }}
           >
             {artist.musicCredits.length > 0 ? (
-              <MusicCreditsList credits={artist.musicCredits} />
+              <MusicCreditsList credits={artist.musicCredits} clipId={artist.musicClipId} />
             ) : (
               <EmptyCredits type="music" />
             )}
