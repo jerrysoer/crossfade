@@ -61,10 +61,28 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({ previousNames: [] }),
       });
       if (randomRes.ok) {
-        const randomArtist = await randomRes.json();
+        const ct = randomRes.headers.get("content-type") || "";
+        let randomArtist: Record<string, unknown> | null = null;
+
+        if (ct.includes("text/x-ndjson")) {
+          const text = await randomRes.text();
+          const lines = text.split("\n").filter((l) => l.trim());
+          for (const line of lines) {
+            try {
+              const chunk = JSON.parse(line);
+              if (chunk.phase === "complete") {
+                const { phase: _, ...data } = chunk;
+                randomArtist = data;
+              }
+            } catch { /* skip */ }
+          }
+        } else {
+          randomArtist = await randomRes.json();
+        }
+
         if (randomArtist?.name) {
           await rpush("cf:queue:random", randomArtist);
-          queueAdded = randomArtist.name;
+          queueAdded = randomArtist.name as string;
           queueSize++;
           console.log(`Cron queue: added "${randomArtist.name}" (queue size: ${queueSize})`);
         }

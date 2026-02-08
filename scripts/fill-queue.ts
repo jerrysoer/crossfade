@@ -38,6 +38,26 @@ async function generateRandom(previousNames: string[]): Promise<{ name: string }
       return null;
     }
 
+    const contentType = res.headers.get("content-type") || "";
+
+    if (contentType.includes("text/x-ndjson")) {
+      // Streaming NDJSON — read all lines and find the "complete" chunk
+      const text = await res.text();
+      const lines = text.split("\n").filter((l) => l.trim());
+      for (const line of lines) {
+        const chunk = JSON.parse(line);
+        if (chunk.phase === "complete") {
+          const { phase: _, ...artist } = chunk;
+          console.log(
+            `  OK: ${artist.name} — ${artist.filmCredits?.length ?? 0} film, ${artist.musicCredits?.length ?? 0} music`
+          );
+          return artist;
+        }
+      }
+      console.error(`  FAIL: No complete chunk in NDJSON response`);
+      return null;
+    }
+
     const data = await res.json();
     console.log(
       `  OK: ${data.name} — ${data.filmCredits?.length ?? 0} film, ${data.musicCredits?.length ?? 0} music`

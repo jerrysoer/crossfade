@@ -338,7 +338,25 @@ async function refillQueue(exclude: Set<string>): Promise<void> {
     });
 
     if (res.ok) {
-      const artist = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      let artist: CrossoverArtist | null = null;
+
+      if (contentType.includes("text/x-ndjson")) {
+        const text = await res.text();
+        const lines = text.split("\n").filter((l) => l.trim());
+        for (const line of lines) {
+          try {
+            const chunk = JSON.parse(line);
+            if (chunk.phase === "complete") {
+              const { phase: _, ...data } = chunk;
+              artist = data as CrossoverArtist;
+            }
+          } catch { /* skip malformed lines */ }
+        }
+      } else {
+        artist = await res.json();
+      }
+
       if (artist?.name) {
         await rpush(QUEUE_KEY, artist);
         console.log(`Queue refill: added "${artist.name}"`);
