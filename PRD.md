@@ -2,9 +2,9 @@
 
 > **Where the Stage Meets the Screen**
 
-**Version**: 1.0
+**Version**: 1.1
 **Date**: 2026-02-07
-**Status**: Draft
+**Status**: Phase 1 Complete
 **Project Location**: `claude-learning/crossfade/`
 
 ---
@@ -113,13 +113,19 @@ Landing Page → "Surprise Me" → View Random Crossover → Share or Get Anothe
 Landing Page → Select Category → Browse List → Select Artist → View Profile
 ```
 
-Categories:
-- **Rappers → Hollywood** (Ice Cube, Will Smith, Ludacris, Queen Latifah)
-- **Rock Stars → Silver Screen** (David Bowie, Mick Jagger, Jared Leto)
-- **Pop Icons → Acting** (Lady Gaga, Beyonce, Madonna, Cher, Barbra Streisand)
-- **Actors → The Studio** (Scarlett Johansson, Jeff Bridges, Keanu Reeves, Robert Downey Jr.)
-- **The Originals** (Frank Sinatra, Dean Martin, Judy Garland — defined the crossover)
-- **Unexpected** (Shaq's rap career, Mr. T's motivational album, Eddie Murphy's music)
+Categories (12 in prompt, 180+ artists total):
+- **Rappers → Hollywood** (28): Ice Cube, Common, Mos Def, Method Man, Ludacris, 50 Cent, Childish Gambino, Eminem, LL Cool J, Drake...
+- **Pop/R&B Stars in Film** (19): Rihanna, Beyonce, Justin Timberlake, Janelle Monae, Madonna, Taylor Swift...
+- **Disney Channel Alumni** (20): Miley Cyrus, Selena Gomez, Zendaya, Demi Lovato, Olivia Rodrigo, Sabrina Carpenter...
+- **Nickelodeon Alumni** (8): Ariana Grande, Victoria Justice, Miranda Cosgrove, Drake Bell...
+- **Rock/Alt Musicians Who Act** (22): David Bowie, Tom Waits, Bjork, Jack Black, Meat Loaf, Flea...
+- **Country Crossovers** (6): Tim McGraw, Willie Nelson, Dolly Parton, Kris Kristofferson...
+- **Actors Who Released Music** (41): Bruce Willis, Scarlett Johansson, Jeff Bridges, Keanu Reeves, Robert Downey Jr, Hugh Laurie, Jeff Goldblum...
+- **Jazz/Classical Crossovers** (5): Woody Allen, Harry Connick Jr, Jamie Foxx...
+- **International** (7): Jackie Chan, Rain, IU, Vanessa Paradis...
+- **Legends in Both** (21): Frank Sinatra, Barbra Streisand, Elvis Presley, Jennifer Lopez, Lady Gaga, Cher...
+- **Broadway/TV Musical** (7): Lea Michele, Mandy Moore, Nick Jonas...
+- Plus any artist not on the list with real credits in both worlds
 
 ---
 
@@ -214,37 +220,55 @@ Categories:
 
 ### 6.2 API Routes
 
-| Route | Method | Description |
-|-------|--------|-------------|
-| `/api/discover` | POST | Random crossover discovery — Claude picks an artist, validated against TMDB + Discogs |
-| `/api/search` | GET | Search for a person across TMDB + Discogs |
-| `/api/artist/[slug]` | GET | Full crossover profile with cached data |
-| `/api/og` | GET | Dynamic OG image generation (existing, needs adaptation) |
+| Route | Method | Description | Status |
+|-------|--------|-------------|--------|
+| `/api/discover` | POST | Random crossover discovery — Claude picks an artist, validated against TMDB + Discogs | Implemented |
+| `/api/og` | GET | Dynamic OG image generation with person photo + direction badge | Implemented |
+| `/api/search` | GET | Search for a person across TMDB + Discogs | Planned (Phase 2) |
+| `/api/artist/[slug]` | GET | Full crossover profile with cached data | Planned (Phase 2) |
 
-### 6.3 Data Flow
+### 6.3 Data Flow (Implemented)
 
 ```
-User Action (search / surprise me / category click)
+User clicks "Surprise Me"
        │
        ▼
-  Next.js API Route
+  POST /api/discover { previousNames: [...] }
        │
-       ├──► Claude AI: Generate narrative, pick artist (for random), "did you know?" fact
+       ├──► Claude AI (Sonnet 4.5): Pick a crossover artist
+       │    Returns: name, narrative, didYouKnow, crossoverDirection,
+       │    tmdbSearchQuery, discogsSearchQuery, alternateNames[]
        │
-       ├──► TMDB API: Fetch filmography, poster art, role details
-       │         └── /search/person → /person/{id}/movie_credits
+       ├──► Collect all search names (name + queries + alternates, deduplicated)
        │
-       ├──► Discogs API: Fetch discography, album art, genre info
-       │         └── /database/search → /artists/{id}/releases
+       ├──► Parallel validation:
+       │    ├── TMDB: searchPerson(allNames) or getPersonDetails(tmdbId)
+       │    │   └── Multi-name search: tries each name until a match
+       │    │
+       │    └── Discogs: searchArtist(allNames) + name-validated matching
+       │        └── Name normalization strips "(2)" suffixes, compares substrings
+       │        └── Generates first-name variants ("Tyrese Gibson" → "Tyrese")
+       │
+       ├──► Retry logic (3 phases):
+       │    1. If TMDB fails → ask Claude for a different artist
+       │    2. If Discogs fails → try TMDB canonical name as fallback
+       │    3. If Discogs has 0 releases → try name variants for alternate artist
+       │
+       ├──► Parallel credit fetch:
+       │    ├── TMDB: /person/{id}/combined_credits (film + TV)
+       │    │   └── Filters "Self" credits, weighted scoring: rating × min(votes/50, 1)
+       │    │
+       │    └── Discogs: /artists/{id}/releases (4-tier filtering)
+       │        └── Tier 1: Main + master → Tier 2: Main → Tier 3: +TrackAppearance → Tier 4: +Producer/Appearance
        │
        ▼
-  Merge & Transform → CrossoverProfile type
+  Merge & Transform → CrossoverArtist type
        │
        ▼
-  Return to Client → Render Profile Card
+  Return to Client → Render CrossoverCard (3-column layout)
 ```
 
-### 6.4 Key Types (Evolving from Existing)
+### 6.4 Key Types (Implemented)
 
 ```typescript
 interface CrossoverArtist {
@@ -253,24 +277,24 @@ interface CrossoverArtist {
   photoUrl: string | null;
   narrative: string;           // AI-generated crossover story
   didYouKnow: string;         // AI-generated surprising fact
-  filmCareer: FilmCredit[];
-  musicCareer: MusicCredit[];
+  filmCredits: FilmCredit[];
+  musicCredits: MusicCredit[];
   crossoverDirection: 'music-to-film' | 'film-to-music' | 'simultaneous';
-  categories: string[];
 }
 
 interface FilmCredit {
   title: string;
   year: number;
-  role: string;
+  character: string;
   posterUrl: string | null;
   tmdbId: number;
   tmdbUrl: string;
   rating: number;
+  mediaType?: 'movie' | 'tv';  // TV badge support
 }
 
 interface MusicCredit {
-  title: string;        // Album or single title
+  title: string;
   artist: string;
   year: number;
   coverUrl: string | null;
@@ -279,31 +303,43 @@ interface MusicCredit {
   genres: string[];
   label: string;
 }
+
+// Claude's response type includes alias resolution
+interface ClaudeCrossoverResponse {
+  name: string;
+  crossoverDirection: CrossoverDirection;
+  narrative: string;
+  didYouKnow: string;
+  tmdbSearchQuery: string;
+  discogsSearchQuery: string;
+  alternateNames?: string[];   // All known aliases for cross-platform search
+  tmdbId?: number;
+  discogsId?: number;
+}
 ```
 
-### 6.5 TMDB Person Endpoints (New)
+### 6.5 TMDB Endpoints (Implemented)
 
-The existing TMDB integration uses movie search. For CrossFade, we need person-based lookups:
-
-- `GET /search/person?query={name}` — Find person by name
+- `GET /search/person?query={name}` — Multi-name search, tries each alias in sequence
 - `GET /person/{id}` — Person details (bio, profile photo)
-- `GET /person/{id}/movie_credits` — Full filmography (cast + crew)
-- `GET /person/{id}/images` — Profile photos
+- `GET /person/{id}/combined_credits` — Film + TV filmography (combined, not movie-only)
 
-### 6.6 Discogs Artist Endpoints (New)
+Scoring: `vote_average * min(vote_count / 50, 1)` filters obscure 10.0-rated entries.
+Self-filtering: Removes "Self", "Himself", "Herself" credits; falls back if < 3 acting roles.
 
-The existing Discogs integration uses release search. We also need:
+### 6.6 Discogs Endpoints (Implemented)
 
-- `GET /database/search?q={name}&type=artist` — Find artist by name
-- `GET /artists/{id}` — Artist details
-- `GET /artists/{id}/releases` — Full discography
+- `GET /database/search?q={name}&type=artist&per_page=10` — Name-validated search
+- `GET /artists/{id}` — Artist details + images
+- `GET /artists/{id}/releases?sort=year&sort_order=desc&per_page=20` — 4-tier filtered releases
 
-### 6.7 Caching Strategy
+Name validation: Normalizes names (lowercase, strip punctuation, remove "(2)" disambiguation), checks exact match then substring inclusion.
 
-- **In-memory cache** (existing): 24h TTL for Discogs responses (rate limit protection)
-- **Extend to TMDB**: Add similar in-memory cache for person lookups
-- **Pre-computed categories**: Category lists are static JSON, not fetched live
-- **Client-side**: Cache crossover profiles in sessionStorage for back-navigation
+### 6.7 Caching & Rate Limiting
+
+- **Discogs rate limiter**: Token bucket (60 req/min) with queuing
+- **In-memory cache**: 24h TTL for all Discogs responses (search, artist, releases)
+- **Client-side**: Session-based `seenNames[]` prevents repeat artists
 
 ---
 
@@ -412,9 +448,8 @@ Every Claude suggestion must be validated:
 ## 11. Environment Variables
 
 ```env
-# Existing
-ANTHROPIC_API_KEY=       # Claude AI
-TMDB_API_KEY=            # The Movie Database (bearer token)
+ANTHROPIC_API_KEY=       # Claude AI (Sonnet 4.5)
+TMDB_API_KEY=            # The Movie Database (v3 API key, query param auth)
 DISCOGS_TOKEN=           # Discogs personal access token
 
 # No new keys needed — existing APIs cover all data sources
@@ -424,33 +459,44 @@ DISCOGS_TOKEN=           # Discogs personal access token
 
 ## 12. Implementation Phases
 
-### Phase 1: Core Pivot (Reuse + Restructure)
+### Phase 1: Core Pivot (Complete)
 
-- [ ] Update types: `MoodPairing` → `CrossoverArtist`, `FilmCredit`, `MusicCredit`
-- [ ] Add TMDB person endpoints (`/search/person`, `/person/{id}/movie_credits`)
-- [ ] Add Discogs artist endpoints (`/database/search?type=artist`, `/artists/{id}/releases`)
-- [ ] Create `/api/discover` route (random crossover via Claude + validation)
-- [ ] Create new prompts for crossover narrator + random discovery
-- [ ] Adapt `ResultCard` → `CrossoverCard` with film/music split layout
-- [ ] Update Hero with "Surprise Me" CTA
+- [x] Update types: `CrossoverArtist`, `FilmCredit`, `MusicCredit`, `ClaudeCrossoverResponse`
+- [x] Add TMDB person endpoints (`/search/person`, `/person/{id}/combined_credits`)
+- [x] Add Discogs artist endpoints (validated search, `getArtist`, `getArtistReleases`)
+- [x] Create `/api/discover` route (random crossover via Claude + TMDB/Discogs validation)
+- [x] Create crossover narrator + random discovery prompts (12 categories, 180+ artists)
+- [x] Build `CrossoverCard` with 3-column layout (FilmCreditsList | NarrativeBlock | MusicCreditsList)
+- [x] Update Hero with "Surprise Me" CTA
+- [x] Update OG image generation for crossover cards
+- [x] Session-based "don't repeat" logic via `seenNames[]`
+- [x] SEO: meta tags, Open Graph, Twitter cards
+- [x] Umami analytics integration
+- [x] Deploy to Vercel
 
-### Phase 2: Search + Categories
+### Phase 1.5: Robustness Improvements (Complete)
+
+- [x] Multi-name search: both `searchPerson` and `searchArtist` accept `string[]`, try aliases in sequence
+- [x] Combined credits: TMDB `/person/{id}/combined_credits` returns film + TV (not movie-only)
+- [x] Name validation: Discogs search normalizes names, matches exact then substring before falling back
+- [x] Name variant generation: auto-tries first name only for multi-word names (handles "Tyrese Gibson" → "Tyrese")
+- [x] 4-tier release filtering: masters → any main → +track appearances → +producer/appearance roles
+- [x] `alternateNames` support: Claude provides all known aliases for cross-platform lookup
+- [x] Smart retry: 3-phase logic (try alt names → ask Claude for new pick → try TMDB canonical name for Discogs)
+- [x] Zero-release fallback: if matched Discogs artist has 0 releases, tries name variants for alternate artist
+- [x] Self-credit filtering: removes "Self/Himself/Herself" with weighted vote scoring
+- [x] TV badge: `mediaType` field on `FilmCredit` for TV vs movie distinction
+- [x] Empty state UI: graceful display when one side has no credits
+- [x] Expanded artist database from ~40 to 180+ across 12 categories
+
+### Phase 2: Search + Categories (Planned)
 
 - [ ] Create `/api/search` route (person search across TMDB + Discogs)
-- [ ] Build search input component (replaces VibeMoodInput)
+- [ ] Build search input component
 - [ ] Define category data (static JSON with curated artist lists)
 - [ ] Build category grid component for landing page
 - [ ] Build `/category/[slug]` page with artist listing
-- [ ] Build `/artist/[slug]` page (shareable profile)
-
-### Phase 3: Polish + Share
-
-- [ ] Update OG image generation for crossover cards
-- [ ] Add "Did You Know?" fact block to profile cards
-- [ ] Add session-based "don't repeat" logic for Surprise Me
-- [ ] SEO: meta tags, structured data, category page pre-rendering
-- [ ] Add Umami analytics (per CLAUDE.md requirement)
-- [ ] Deploy to Vercel
+- [ ] Build `/artist/[slug]` page (shareable, deep-linkable profile)
 
 ---
 
@@ -481,7 +527,7 @@ DISCOGS_TOKEN=           # Discogs personal access token
 ## 15. Open Questions
 
 1. **Should categories be fully static (curated JSON) or AI-assisted (Claude generates the list)?** Recommendation: Start static for reliability, explore AI-assisted later.
-2. **Should we include TV credits or film-only?** Recommendation: Include TV — many crossovers happen on TV first (e.g., Will Smith in Fresh Prince).
+2. ~~**Should we include TV credits or film-only?**~~ **Resolved**: Yes, using TMDB `/combined_credits` endpoint. TV credits now appear with a "TV" badge. This was critical — many crossovers are TV-first (Zendaya in Euphoria, Selena Gomez in Only Murders).
 3. **Do we want a "submit a crossfader" feature?** Recommendation: Post-MVP — let users suggest artists we missed.
 4. **Spotify/Apple Music embeds?** Recommendation: Post-MVP — would be cool to hear their music, but adds complexity and potential licensing concerns.
 

@@ -71,11 +71,18 @@ export default function FilmCreditsList({ credits }: FilmCreditsListProps) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[var(--accent-gold)] transition-colors">
-                {credit.title}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[var(--accent-gold)] transition-colors">
+                  {credit.title}
+                </p>
+                {credit.mediaType === "tv" && (
+                  <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent-gold-dim)] text-[var(--accent-gold)] font-medium uppercase tracking-wider">
+                    TV
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                {credit.year}
+                {credit.year > 0 ? credit.year : ""}
               </p>
               {credit.character && (
                 <p className="text-xs text-[var(--text-secondary)] mt-1 font-[family-name:var(--font-playfair)] italic truncate">

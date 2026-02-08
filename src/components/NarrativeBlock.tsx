@@ -25,7 +25,10 @@ export default function NarrativeBlock({
   return (
     <div className="flex flex-col items-center text-center max-w-[320px] lg:max-w-[280px]">
       {/* Person photo */}
-      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden mb-5 ring-2 ring-[var(--border)] ring-offset-2 ring-offset-[var(--surface)]">
+      <div
+        className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden mb-5 ring-2 ring-[var(--border)] ring-offset-2 ring-offset-[var(--surface)]"
+        style={{ boxShadow: "0 0 40px rgba(212, 168, 83, 0.12), 0 0 80px rgba(212, 168, 83, 0.06)" }}
+      >
         {photoUrl ? (
           <Image
             src={photoUrl}

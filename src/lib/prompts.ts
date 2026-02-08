@@ -28,7 +28,7 @@ RULES:
 
    You can also pick anyone NOT on these lists as long as they have real credits in both worlds.
 
-3. Provide the name exactly as it appears on TMDB (for person search) and on Discogs (for artist search). If the person uses different names in each world (e.g., "Donald Glover" on TMDB but "Childish Gambino" on Discogs), provide BOTH names separately.
+3. Provide the name exactly as it appears on TMDB (for person search) and on Discogs (for artist search). If the person uses different names in each world (e.g., "Donald Glover" on TMDB but "Childish Gambino" on Discogs), provide BOTH names separately. IMPORTANT: Many artists use a single name on Discogs (e.g., "Tyrese" not "Tyrese Gibson", "Beyonce" not "Beyonce Knowles", "Aaliyah" not "Aaliyah Haughton", "Rihanna" not "Robyn Fenty"). Use the name fans would actually search for on each platform.
 4. Include an "alternateNames" array listing ALL names this person is known by — stage names, birth names, band names, aliases. Example: for Donald Glover, include ["Donald Glover", "Childish Gambino"]. For Yasiin Bey, include ["Mos Def", "Yasiin Bey"]. For Bruce Willis, include ["Bruce Willis", "Bruno"]. This helps us find them on different databases.
 5. Write a 2-3 sentence narrative about their crossover journey — interesting, specific, not generic. Focus on what makes their dual career surprising or noteworthy.
 6. Write a single surprising "did you know?" fact about their dual career.

@@ -107,12 +107,34 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Fetch credits in parallel
-    const [combinedCredits, artistReleases] = await Promise.all([
+    let [combinedCredits, artistReleases] = await Promise.all([
       getPersonCombinedCredits(tmdbPerson.id),
       discogsResult
         ? getArtistReleases(discogsResult.id, 20)
         : Promise.resolve([]),
     ]);
+
+    // 5b. If Discogs artist found but has 0 releases, try name variants
+    if (discogsResult && artistReleases.length === 0) {
+      console.log(
+        `Discogs artist "${discogsResult.name}" has 0 releases, trying name variants...`
+      );
+      const nameVariants = allNames.flatMap((n) => {
+        const parts = n.split(/\s+/);
+        return parts.length >= 2 && parts[0].length >= 4 ? [parts[0]] : [];
+      });
+      for (const variant of nameVariants) {
+        const altResult = await searchArtist(variant);
+        if (altResult && altResult.id !== discogsResult.id) {
+          const altReleases = await getArtistReleases(altResult.id, 20);
+          if (altReleases.length > 0) {
+            discogsResult = await getArtist(altResult.id);
+            artistReleases = altReleases;
+            break;
+          }
+        }
+      }
+    }
 
     // 6. Map to our types
     const filmCredits: FilmCredit[] = combinedCredits.slice(0, 5).map((c) => ({

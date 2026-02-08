@@ -122,6 +122,28 @@ interface DiscogsArtistReleasesResponse {
   releases: DiscogsArtistRelease[];
 }
 
+// ── Name variants ──
+
+function generateNameVariants(names: string[]): string[] {
+  const seen = new Set(names.map((n) => n.toLowerCase()));
+  const variants: string[] = [];
+
+  for (const name of names) {
+    const parts = name.split(/\s+/);
+    // For multi-word names, try first name only (handles "Tyrese Gibson" → "Tyrese",
+    // "Aaliyah Haughton" → "Aaliyah", etc.)
+    if (parts.length >= 2) {
+      const first = parts[0];
+      if (first.length >= 4 && !seen.has(first.toLowerCase())) {
+        seen.add(first.toLowerCase());
+        variants.push(first);
+      }
+    }
+  }
+
+  return variants;
+}
+
 // ── Artist endpoints ──
 
 export async function searchArtist(
@@ -129,7 +151,10 @@ export async function searchArtist(
 ): Promise<DiscogsSearchResult | null> {
   const nameList = Array.isArray(names) ? names : [names];
 
-  for (const name of nameList) {
+  // Try all provided names first, then fall back to generated variants
+  const allNames = [...nameList, ...generateNameVariants(nameList)];
+
+  for (const name of allNames) {
     const cacheKey = `artist-search:${name}`;
     const cached = getCached<DiscogsSearchResult>(cacheKey);
     if (cached) return cached;
@@ -197,6 +222,16 @@ export async function getArtistReleases(
 
   const data: DiscogsArtistReleasesResponse = await res.json();
 
+  const musicRoles = new Set([
+    "Main",
+    "TrackAppearance",
+    "Appearance",
+    "Producer",
+    "Co-producer",
+    "Remix",
+    "Vocal",
+  ]);
+
   // Tier 1: Main artist on master releases (albums)
   let releases = data.releases.filter(
     (r) => r.role === "Main" && r.type === "master"
@@ -207,11 +242,16 @@ export async function getArtistReleases(
     releases = data.releases.filter((r) => r.role === "Main");
   }
 
-  // Tier 3: Include TrackAppearance (features, soundtracks)
+  // Tier 3: Include features, soundtracks
   if (releases.length < 2) {
     releases = data.releases.filter(
       (r) => r.role === "Main" || r.role === "TrackAppearance"
     );
+  }
+
+  // Tier 4: Any music-related role (producer, appearance, etc.)
+  if (releases.length < 2) {
+    releases = data.releases.filter((r) => musicRoles.has(r.role));
   }
 
   setCache(cacheKey, releases);

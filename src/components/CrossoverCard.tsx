@@ -4,6 +4,30 @@ import MusicCreditsList from "./MusicCreditsList";
 import NarrativeBlock from "./NarrativeBlock";
 import ShareButton from "./ShareButton";
 
+function EmptyCredits({ type }: { type: "film" | "music" }) {
+  const isFilm = type === "film";
+  return (
+    <div className="w-full max-w-[280px] flex flex-col items-center justify-center py-8 text-center">
+      <div className="w-10 h-10 mb-3 opacity-20">
+        {isFilm ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full text-[var(--text-muted)]">
+            <rect x="2" y="3" width="20" height="18" rx="2" />
+            <path d="M7 3v18M17 3v18M2 9h20M2 15h20" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full text-[var(--text-muted)]">
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
+      </div>
+      <p className="text-xs text-[var(--text-muted)]">
+        {isFilm ? "No film credits found" : "No music credits found"}
+      </p>
+    </div>
+  );
+}
+
 interface CrossoverCardProps {
   artist: CrossoverArtist;
   onTryAnother: () => void;
@@ -39,7 +63,11 @@ export default function CrossoverCard({
                        opacity-0 animate-fade-in-up"
             style={{ animationDelay: "0.3s" }}
           >
-            <FilmCreditsList credits={artist.filmCredits} />
+            {artist.filmCredits.length > 0 ? (
+              <FilmCreditsList credits={artist.filmCredits} />
+            ) : (
+              <EmptyCredits type="film" />
+            )}
           </div>
 
           {/* Narrative center */}
@@ -63,7 +91,11 @@ export default function CrossoverCard({
                        opacity-0 animate-fade-in-up"
             style={{ animationDelay: "0.4s" }}
           >
-            <MusicCreditsList credits={artist.musicCredits} />
+            {artist.musicCredits.length > 0 ? (
+              <MusicCreditsList credits={artist.musicCredits} />
+            ) : (
+              <EmptyCredits type="music" />
+            )}
           </div>
         </div>
 
