@@ -27,7 +27,23 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<CrossoverArtist | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [seenNames, setSeenNames] = useState<string[]>([]);
+  const [seenNames, setSeenNames] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("cf:seen") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist seenNames to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("cf:seen", JSON.stringify(seenNames));
+    } catch {
+      // localStorage unavailable
+    }
+  }, [seenNames]);
 
   // Restore result from URL hash on mount
   useEffect(() => {
