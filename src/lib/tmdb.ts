@@ -56,6 +56,10 @@ export async function searchPerson(
   const nameList = Array.isArray(names) ? names : [names];
 
   for (const name of nameList) {
+    const cacheKey = `tmdb:search:${name.toLowerCase()}`;
+    const cached = await getCached<TMDBPerson>(cacheKey);
+    if (cached) return cached;
+
     const url = withKey(
       `${TMDB_BASE}/search/person?query=${encodeURIComponent(name)}&language=en-US&page=1`
     );
@@ -63,7 +67,10 @@ export async function searchPerson(
     if (!res.ok) continue;
 
     const data: TMDBPersonSearchResponse = await res.json();
-    if (data.results.length > 0) return data.results[0];
+    if (data.results.length > 0) {
+      await setCache(cacheKey, data.results[0], TTL.TMDB);
+      return data.results[0];
+    }
   }
   return null;
 }

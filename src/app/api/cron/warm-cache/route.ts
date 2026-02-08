@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CROSSOVER_ARTISTS } from "@/lib/artists";
-import { getCached, setCache, TTL } from "@/lib/cache";
+import { getCached, setCache, rpush, llen, TTL } from "@/lib/cache";
 
 const CRON_INDEX_KEY = "cf:cron:index";
 
@@ -51,12 +51,34 @@ export async function GET(request: NextRequest) {
 
     console.log(`Cron warm-cache: refreshed "${artist}" (index ${currentIndex})`);
 
+    // Also generate a random result for the pre-computed queue
+    let queueSize = await llen("cf:queue:random");
+    let queueAdded: string | null = null;
+    if (queueSize < 30) {
+      const randomRes = await fetch(`${baseUrl}/api/discover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ previousNames: [] }),
+      });
+      if (randomRes.ok) {
+        const randomArtist = await randomRes.json();
+        if (randomArtist?.name) {
+          await rpush("cf:queue:random", randomArtist);
+          queueAdded = randomArtist.name;
+          queueSize++;
+          console.log(`Cron queue: added "${randomArtist.name}" (queue size: ${queueSize})`);
+        }
+      }
+    }
+
     return NextResponse.json({
       status: "ok",
       artist,
       index: currentIndex,
       nextIndex,
       totalArtists: CROSSOVER_ARTISTS.length,
+      queueSize,
+      queueAdded,
     });
   } catch (error) {
     console.error("Cron warm-cache error:", error);

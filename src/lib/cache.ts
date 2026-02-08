@@ -36,6 +36,38 @@ export async function setCache(
   }
 }
 
+// ── List operations (for pre-computed queue) ──
+
+export async function lpop<T>(key: string): Promise<T | null> {
+  const client = getRedis();
+  if (!client) return null;
+  try {
+    return await client.lpop<T>(key);
+  } catch {
+    return null;
+  }
+}
+
+export async function rpush(key: string, data: unknown): Promise<void> {
+  const client = getRedis();
+  if (!client) return;
+  try {
+    await client.rpush(key, JSON.stringify(data));
+  } catch {
+    // Queue push failures are non-fatal
+  }
+}
+
+export async function llen(key: string): Promise<number> {
+  const client = getRedis();
+  if (!client) return 0;
+  try {
+    return await client.llen(key);
+  } catch {
+    return 0;
+  }
+}
+
 // TTL constants (seconds)
 export const TTL = {
   TMDB: 7 * 24 * 60 * 60, // 7 days

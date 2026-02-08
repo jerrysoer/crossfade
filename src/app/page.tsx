@@ -26,6 +26,7 @@ function updateOgMeta(artist: CrossoverArtist | null) {
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<CrossoverArtist | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [seenNames, setSeenNames] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -66,6 +67,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setIsStreaming(false);
     window.history.replaceState(null, "", "/");
 
     try {
@@ -85,22 +87,79 @@ export default function Home() {
         );
       }
 
-      const artist: CrossoverArtist = await res.json();
-      setResult(artist);
-      setSeenNames((prev) => [...prev, artist.name]);
+      const contentType = res.headers.get("content-type") || "";
 
-      // Push result into URL hash for shareability
-      const hash = encodeURIComponent(JSON.stringify(artist));
-      window.history.replaceState(null, "", `#${hash}`);
-      updateOgMeta(artist);
+      if (contentType.includes("text/x-ndjson") && res.body) {
+        // Streaming response — read NDJSON chunks
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }, 100);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const chunk = JSON.parse(line);
+              if (chunk.phase === "header") {
+                // Show partial result immediately (no credits yet)
+                const partial: CrossoverArtist = {
+                  name: chunk.name,
+                  slug: chunk.slug,
+                  photoUrl: chunk.photoUrl,
+                  narrative: chunk.narrative,
+                  didYouKnow: chunk.didYouKnow,
+                  crossoverDirection: chunk.crossoverDirection,
+                  filmCredits: [],
+                  musicCredits: [],
+                  birthday: chunk.birthday,
+                  birthplace: chunk.birthplace,
+                  deathday: chunk.deathday,
+                  filmClipId: null,
+                  musicClipId: null,
+                };
+                setResult(partial);
+                setIsLoading(false);
+                setIsStreaming(true);
+                setSeenNames((prev) => [...prev, chunk.name]);
+                setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
+              } else if (chunk.phase === "complete") {
+                const { phase: _, ...artist } = chunk;
+                setResult(artist as CrossoverArtist);
+                setIsStreaming(false);
+                const hash = encodeURIComponent(JSON.stringify(artist));
+                window.history.replaceState(null, "", `#${hash}`);
+                updateOgMeta(artist as CrossoverArtist);
+              } else if (chunk.phase === "error") {
+                setError(chunk.error || "Failed to load credits.");
+                setIsStreaming(false);
+              }
+            } catch {
+              // Malformed line, skip
+            }
+          }
+        }
+      } else {
+        // JSON response (cache/queue hit)
+        const artist: CrossoverArtist = await res.json();
+        setResult(artist);
+        setSeenNames((prev) => [...prev, artist.name]);
+        const hash = encodeURIComponent(JSON.stringify(artist));
+        window.history.replaceState(null, "", `#${hash}`);
+        updateOgMeta(artist);
+        setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   }
 
@@ -138,7 +197,7 @@ export default function Home() {
 
         {/* Result */}
         <div className="pt-8 pb-24">
-          <CrossoverCard artist={result} onTryAnother={() => handleDiscover()} />
+          <CrossoverCard artist={result} onTryAnother={() => handleDiscover()} isStreaming={isStreaming} />
         </div>
         <Footer />
       </main>

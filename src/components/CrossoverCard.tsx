@@ -28,14 +28,33 @@ function EmptyCredits({ type }: { type: "film" | "music" }) {
   );
 }
 
+function CreditsLoadingSkeleton() {
+  return (
+    <div className="w-full max-w-[280px] flex flex-col gap-3 animate-pulse">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="flex gap-3 items-start">
+          <div className="w-12 h-16 rounded bg-[var(--border)] flex-shrink-0" />
+          <div className="flex-1 space-y-2 pt-1">
+            <div className="h-3 bg-[var(--border)] rounded w-3/4" />
+            <div className="h-2 bg-[var(--border)] rounded w-1/2" />
+          </div>
+        </div>
+      ))}
+      <p className="text-xs text-[var(--text-muted)] text-center mt-2">Loading credits...</p>
+    </div>
+  );
+}
+
 interface CrossoverCardProps {
   artist: CrossoverArtist;
   onTryAnother: () => void;
+  isStreaming?: boolean;
 }
 
 export default function CrossoverCard({
   artist,
   onTryAnother,
+  isStreaming = false,
 }: CrossoverCardProps) {
   return (
     <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6">
@@ -60,6 +79,8 @@ export default function CrossoverCard({
           >
             {artist.filmCredits.length > 0 ? (
               <FilmCreditsList credits={artist.filmCredits} clipId={artist.filmClipId} />
+            ) : isStreaming ? (
+              <CreditsLoadingSkeleton />
             ) : (
               <EmptyCredits type="film" />
             )}
@@ -91,6 +112,8 @@ export default function CrossoverCard({
           >
             {artist.musicCredits.length > 0 ? (
               <MusicCreditsList credits={artist.musicCredits} clipId={artist.musicClipId} />
+            ) : isStreaming ? (
+              <CreditsLoadingSkeleton />
             ) : (
               <EmptyCredits type="music" />
             )}

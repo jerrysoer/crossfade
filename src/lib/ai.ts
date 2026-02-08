@@ -13,18 +13,21 @@ function getClient(): Anthropic {
   return client;
 }
 
+const DEFAULT_MODEL = "claude-sonnet-4-5-20250929";
+
 export async function callClaude(
   systemPrompt: string,
   userPrompt: string,
   options?: {
     maxTokens?: number;
     temperature?: number;
+    model?: string;
   }
 ): Promise<string> {
   const anthropic = getClient();
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
+    model: options?.model ?? DEFAULT_MODEL,
     max_tokens: options?.maxTokens ?? 4096,
     temperature: options?.temperature ?? 0.7,
     system: systemPrompt,
@@ -42,7 +45,7 @@ export async function callClaude(
 export async function callClaudeJSON<T>(
   systemPrompt: string,
   userPrompt: string,
-  options?: { maxTokens?: number; temperature?: number }
+  options?: { maxTokens?: number; temperature?: number; model?: string }
 ): Promise<T> {
   const text = await callClaude(
     systemPrompt,
