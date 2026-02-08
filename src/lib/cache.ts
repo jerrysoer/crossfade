@@ -52,7 +52,7 @@ export async function rpush(key: string, data: unknown): Promise<void> {
   const client = getRedis();
   if (!client) return;
   try {
-    await client.rpush(key, JSON.stringify(data));
+    await client.rpush(key, data);
   } catch {
     // Queue push failures are non-fatal
   }
