@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /api/discover
+Disallow: /api/search
 
 Sitemap: https://crossfade-neon.vercel.app/sitemap.xml

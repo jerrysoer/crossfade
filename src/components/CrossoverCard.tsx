@@ -77,6 +77,9 @@ export default function CrossoverCard({
               narrative={artist.narrative}
               didYouKnow={artist.didYouKnow}
               crossoverDirection={artist.crossoverDirection}
+              birthday={artist.birthday}
+              birthplace={artist.birthplace}
+              deathday={artist.deathday}
             />
           </div>
 

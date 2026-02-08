@@ -46,7 +46,7 @@ export default function Home() {
     }
   }, []);
 
-  async function handleDiscover() {
+  async function handleDiscover(searchName?: string) {
     setIsLoading(true);
     setError(null);
     setResult(null);
@@ -56,7 +56,10 @@ export default function Home() {
       const res = await fetch("/api/discover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ previousNames: seenNames }),
+        body: JSON.stringify({
+          previousNames: seenNames,
+          ...(searchName && { searchName }),
+        }),
       });
 
       if (!res.ok) {
@@ -106,7 +109,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <button
-              onClick={handleDiscover}
+              onClick={() => handleDiscover()}
               className="px-5 py-2 rounded-full bg-[var(--accent-red)] text-white
                          text-sm font-medium
                          hover:bg-[#BF2B29] active:scale-[0.98]
@@ -119,7 +122,7 @@ export default function Home() {
 
         {/* Result */}
         <div className="pt-8 pb-24">
-          <CrossoverCard artist={result} onTryAnother={handleDiscover} />
+          <CrossoverCard artist={result} onTryAnother={() => handleDiscover()} />
         </div>
         <Footer />
       </main>
@@ -128,7 +131,7 @@ export default function Home() {
 
   return (
     <main className="relative">
-      <Hero onDiscover={handleDiscover} isLoading={isLoading} />
+      <Hero onDiscover={() => handleDiscover()} onSearch={(name) => handleDiscover(name)} isLoading={isLoading} />
 
       {/* Loading state */}
       {isLoading && (

@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { previousNames } = parsed.data;
+    const { previousNames, searchName } = parsed.data;
 
     // 1. Ask Claude for a crossover artist
     let claude = await callClaudeJSON<ClaudeCrossoverResponse>(
       SYSTEM_PROMPT_CROSSOVER_DISCOVERY,
-      buildDiscoverPrompt(previousNames),
-      { maxTokens: 1024, temperature: 0.9 }
+      buildDiscoverPrompt(previousNames, searchName),
+      { maxTokens: 1024, temperature: searchName ? 0.3 : 0.9 }
     );
 
     // 2. Validate against TMDB + Discogs in parallel (using all known names)
@@ -186,6 +186,42 @@ export async function POST(request: NextRequest) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
+    // 8b. Match trivia to credits (fuzzy: exact → includes → word overlap)
+    if (claude.creditTrivia) {
+      const triviaEntries = claude.creditTrivia.map((t) => ({
+        key: t.title.toLowerCase().replace(/[^a-z0-9\s]/g, ""),
+        fact: t.fact,
+        used: false,
+      }));
+
+      const allCredits = [...filmCredits, ...musicCredits];
+      for (const credit of allCredits) {
+        const cKey = credit.title.toLowerCase().replace(/[^a-z0-9\s]/g, "");
+        // Exact match
+        let match = triviaEntries.find((t) => !t.used && t.key === cKey);
+        // Substring match
+        if (!match) {
+          match = triviaEntries.find(
+            (t) => !t.used && (cKey.includes(t.key) || t.key.includes(cKey))
+          );
+        }
+        // Word overlap (at least 2 shared words)
+        if (!match) {
+          const cWords = new Set(cKey.split(/\s+/).filter((w) => w.length > 2));
+          match = triviaEntries.find((t) => {
+            if (t.used) return false;
+            const tWords = t.key.split(/\s+/).filter((w) => w.length > 2);
+            const overlap = tWords.filter((w) => cWords.has(w)).length;
+            return overlap >= 2 || (tWords.length === 1 && cWords.has(tWords[0]));
+          });
+        }
+        if (match) {
+          credit.trivia = match.fact;
+          match.used = true;
+        }
+      }
+    }
+
     const artist: CrossoverArtist = {
       name: claude.name,
       slug,
@@ -195,6 +231,9 @@ export async function POST(request: NextRequest) {
       crossoverDirection: claude.crossoverDirection,
       filmCredits,
       musicCredits,
+      birthday: tmdbPerson.birthday ?? null,
+      birthplace: tmdbPerson.place_of_birth ?? null,
+      deathday: tmdbPerson.deathday ?? null,
     };
 
     return NextResponse.json(artist);
@@ -215,7 +254,10 @@ async function resolveTMDBPerson(
     const person = await getPersonDetails(claude.tmdbId);
     if (person) return person;
   }
-  return searchPerson(allNames);
+  const searchResult = await searchPerson(allNames);
+  if (!searchResult) return null;
+  // Fetch full person details (birthday, birthplace, etc.)
+  return (await getPersonDetails(searchResult.id)) ?? searchResult;
 }
 
 async function resolveDiscogsArtist(

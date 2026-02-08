@@ -20,6 +20,9 @@ interface TMDBPerson {
   biography: string;
   profile_path: string | null;
   known_for_department: string;
+  birthday: string | null;
+  place_of_birth: string | null;
+  deathday: string | null;
 }
 
 interface TMDBPersonSearchResponse {

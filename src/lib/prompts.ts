@@ -36,6 +36,7 @@ RULES:
 6. Write a single surprising "did you know?" fact about their dual career.
 7. Classify their direction: "music-to-film" (started in music, moved to acting), "film-to-music" (started in acting, moved to music), or "simultaneous" (did both from early career).
 8. If you know the TMDB person ID or Discogs artist ID, include them. Otherwise leave those fields out.
+9. Provide a "creditTrivia" array with 5-8 short, surprising trivia facts about their most notable films, TV shows, and albums. Each entry has a "title" (the movie/show/album name, matching how it appears on TMDB or Discogs) and a "fact" (a single sentence, max 15 words, genuinely surprising). Focus on behind-the-scenes stories, record-breaking stats, unexpected connections, or fun production details.
 
 RESPONSE FORMAT (JSON):
 {
@@ -45,18 +46,30 @@ RESPONSE FORMAT (JSON):
   "didYouKnow": "A single surprising fact.",
   "tmdbSearchQuery": "Name As On TMDB",
   "discogsSearchQuery": "Name Or Stage Name As On Discogs",
-  "alternateNames": ["Alt Name 1", "Alt Name 2"]
+  "alternateNames": ["Alt Name 1", "Alt Name 2"],
+  "creditTrivia": [
+    {"title": "Movie or Album Title", "fact": "A short surprising fact."},
+    {"title": "Another Title", "fact": "Another short fact."}
+  ]
 }`;
 
-export function buildDiscoverPrompt(previousNames?: string[]): string {
-  let prompt =
-    "Pick a crossover artist — someone with genuine credits in both music and film/TV acting.";
+export function buildDiscoverPrompt(previousNames?: string[], searchName?: string): string {
+  let prompt: string;
 
-  if (previousNames && previousNames.length > 0) {
-    prompt += `\n\nDo NOT pick any of these — the user has already seen them: ${previousNames.join(", ")}`;
+  if (searchName) {
+    prompt = `The user wants to learn about "${searchName}" as a crossover artist. Provide information about this person's dual career in music and film/TV acting. If this person doesn't have genuine credits in both worlds, still respond with whatever crossover connections exist — even minor ones.`;
+  } else {
+    prompt =
+      "Pick a crossover artist — someone with genuine credits in both music and film/TV acting.";
+
+    if (previousNames && previousNames.length > 0) {
+      prompt += `\n\nDo NOT pick any of these — the user has already seen them: ${previousNames.join(", ")}`;
+    }
+
+    prompt +=
+      "\n\nGo beyond the obvious picks. Surprise me.";
   }
 
-  prompt +=
-    "\n\nGo beyond the obvious picks. Surprise me. Make sure your tmdbSearchQuery and discogsSearchQuery are accurate — use the exact name as it appears on each platform. Always include alternateNames with all known aliases.";
+  prompt += " Make sure your tmdbSearchQuery and discogsSearchQuery are accurate — use the exact name as it appears on each platform. Always include alternateNames with all known aliases.";
   return prompt;
 }

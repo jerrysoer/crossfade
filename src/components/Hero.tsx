@@ -1,13 +1,15 @@
 "use client";
 
 import ThemeToggle from "./ThemeToggle";
+import SearchInput from "./SearchInput";
 
 interface HeroProps {
   onDiscover: () => void;
+  onSearch: (name: string) => void;
   isLoading?: boolean;
 }
 
-export default function Hero({ onDiscover, isLoading }: HeroProps) {
+export default function Hero({ onDiscover, onSearch, isLoading }: HeroProps) {
   return (
     <section className="relative min-h-[80vh] flex flex-col items-center justify-center px-6">
       {/* Theme toggle — top right */}
@@ -71,9 +73,20 @@ export default function Hero({ onDiscover, isLoading }: HeroProps) {
           >
             {isLoading ? "Discovering..." : "Surprise Me"}
           </button>
-          <p className="text-xs text-[var(--text-muted)] mt-4 max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs text-[var(--text-muted)] mt-4 mb-6 max-w-xs mx-auto leading-relaxed">
             Discover a musician who acts — or an actor who sings
           </p>
+        </div>
+
+        {/* Search */}
+        <div
+          className="opacity-0 animate-fade-in-up"
+          style={{ animationDelay: "0.5s" }}
+        >
+          <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--text-muted)] mb-3">
+            or search for someone
+          </p>
+          <SearchInput onSelect={onSearch} disabled={isLoading} />
         </div>
       </div>
     </section>

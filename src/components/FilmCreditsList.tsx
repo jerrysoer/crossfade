@@ -90,6 +90,11 @@ export default function FilmCreditsList({ credits }: FilmCreditsListProps) {
                   </span>
                 </div>
               )}
+              {credit.trivia && (
+                <p className="text-[10px] text-[var(--text-secondary)] mt-1.5 leading-snug italic">
+                  {credit.trivia}
+                </p>
+              )}
             </div>
           </a>
         ))}

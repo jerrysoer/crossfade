@@ -9,6 +9,7 @@ export interface FilmCredit {
   tmdbUrl: string;
   rating: number;
   mediaType?: "movie" | "tv";
+  trivia?: string;
 }
 
 export interface MusicCredit {
@@ -20,6 +21,7 @@ export interface MusicCredit {
   discogsUrl: string;
   genres: string[];
   label: string;
+  trivia?: string;
 }
 
 export interface CrossoverArtist {
@@ -31,6 +33,14 @@ export interface CrossoverArtist {
   crossoverDirection: CrossoverDirection;
   filmCredits: FilmCredit[];
   musicCredits: MusicCredit[];
+  birthday: string | null;
+  birthplace: string | null;
+  deathday: string | null;
+}
+
+export interface CreditTrivia {
+  title: string;
+  fact: string;
 }
 
 export interface ClaudeCrossoverResponse {
@@ -43,4 +53,5 @@ export interface ClaudeCrossoverResponse {
   alternateNames?: string[];
   tmdbId?: number;
   discogsId?: number;
+  creditTrivia?: CreditTrivia[];
 }

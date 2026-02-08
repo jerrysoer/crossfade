@@ -1,6 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0A0A08"/>
-  <text x="4" y="23" font-family="Georgia, serif" font-size="18" font-weight="700" fill="#F5F0E8">C</text>
-  <text x="14" y="23" font-family="Georgia, serif" font-size="18" font-style="italic" fill="#D4A853">/</text>
-  <text x="19" y="23" font-family="Georgia, serif" font-size="18" font-weight="700" fill="#D4A853">F</text>
+  <rect width="32" height="32" rx="6" fill="#F7F4EE"/>
+  <!-- Film strip (left half) -->
+  <rect x="3" y="8" width="12" height="16" rx="1.5" fill="none" stroke="#1A1917" stroke-width="1.2"/>
+  <rect x="4.5" y="10" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="4.5" y="13.5" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="4.5" y="17" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="4.5" y="20.5" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="11.5" y="10" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="11.5" y="13.5" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="11.5" y="17" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <rect x="11.5" y="20.5" width="2" height="2" rx="0.3" fill="#1A1917"/>
+  <!-- Slash divider -->
+  <line x1="17.5" y1="7" x2="14.5" y2="25" stroke="#D63230" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Music note (right half) -->
+  <circle cx="22" cy="21" r="3" fill="none" stroke="#1A1917" stroke-width="1.2"/>
+  <line x1="25" y1="21" x2="25" y2="9" stroke="#1A1917" stroke-width="1.2"/>
+  <path d="M25 9 C25 9 29 8 29 11" stroke="#1A1917" stroke-width="1.2" fill="none" stroke-linecap="round"/>
 </svg>
