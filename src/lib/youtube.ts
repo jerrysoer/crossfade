@@ -1,3 +1,5 @@
+import { getCached, setCache, TTL } from "./cache";
+
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
 interface SearchOptions {
@@ -6,6 +8,10 @@ interface SearchOptions {
 }
 
 async function searchYouTube({ query, videoCategoryId }: SearchOptions): Promise<string | null> {
+  const cacheKey = `yt:${videoCategoryId || "0"}:${query.toLowerCase()}`;
+  const cached = await getCached<string>(cacheKey);
+  if (cached) return cached;
+
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) {
     console.warn("YOUTUBE_API_KEY not set, skipping YouTube search");
@@ -33,6 +39,9 @@ async function searchYouTube({ query, videoCategoryId }: SearchOptions): Promise
 
     const data = await res.json();
     const videoId = data.items?.[0]?.id?.videoId;
+    if (videoId) {
+      await setCache(cacheKey, videoId, TTL.YOUTUBE);
+    }
     return videoId ?? null;
   } catch (err) {
     console.warn("YouTube search error:", err);

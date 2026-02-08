@@ -1,3 +1,5 @@
+import { getCached, setCache, TTL } from "./cache";
+
 const DISCOGS_BASE = "https://api.discogs.com";
 
 function getHeaders(): HeadersInit {
@@ -42,24 +44,6 @@ function acquireToken(): Promise<void> {
       }
     }, 1100);
   });
-}
-
-// ── In-memory cache (24h TTL) ──
-
-const cache = new Map<string, { data: unknown; expires: number }>();
-const TTL = 24 * 60 * 60 * 1000;
-
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  if (!entry || Date.now() > entry.expires) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.data as T;
-}
-
-function setCache(key: string, data: unknown) {
-  cache.set(key, { data, expires: Date.now() + TTL });
 }
 
 // ── Name matching ──
@@ -155,8 +139,8 @@ export async function searchArtist(
   const allNames = [...nameList, ...generateNameVariants(nameList)];
 
   for (const name of allNames) {
-    const cacheKey = `artist-search:${name}`;
-    const cached = getCached<DiscogsSearchResult>(cacheKey);
+    const cacheKey = `discogs:search:${name.toLowerCase()}`;
+    const cached = await getCached<DiscogsSearchResult>(cacheKey);
     if (cached) return cached;
 
     await acquireToken();
@@ -177,13 +161,13 @@ export async function searchArtist(
     // Try exact match first
     const exactMatch = data.results.find((r) => namesMatch(name, r.title));
     if (exactMatch) {
-      setCache(cacheKey, exactMatch);
+      await setCache(cacheKey, exactMatch, TTL.DISCOGS);
       return exactMatch;
     }
 
     // Fall back to first result (original behavior as last resort)
     const first = data.results[0];
-    setCache(cacheKey, first);
+    await setCache(cacheKey, first, TTL.DISCOGS);
     return first;
   }
 
@@ -191,8 +175,8 @@ export async function searchArtist(
 }
 
 export async function getArtist(id: number): Promise<DiscogsArtist | null> {
-  const cacheKey = `artist:${id}`;
-  const cached = getCached<DiscogsArtist>(cacheKey);
+  const cacheKey = `discogs:artist:${id}`;
+  const cached = await getCached<DiscogsArtist>(cacheKey);
   if (cached) return cached;
 
   await acquireToken();
@@ -202,7 +186,7 @@ export async function getArtist(id: number): Promise<DiscogsArtist | null> {
   if (!res.ok) return null;
 
   const data: DiscogsArtist = await res.json();
-  setCache(cacheKey, data);
+  await setCache(cacheKey, data, TTL.DISCOGS);
   return data;
 }
 
@@ -210,8 +194,8 @@ export async function getArtistReleases(
   id: number,
   limit: number = 20
 ): Promise<DiscogsArtistRelease[]> {
-  const cacheKey = `artist-releases:${id}:${limit}`;
-  const cached = getCached<DiscogsArtistRelease[]>(cacheKey);
+  const cacheKey = `discogs:releases:${id}:${limit}`;
+  const cached = await getCached<DiscogsArtistRelease[]>(cacheKey);
   if (cached) return cached;
 
   await acquireToken();
@@ -254,7 +238,7 @@ export async function getArtistReleases(
     releases = data.releases.filter((r) => musicRoles.has(r.role));
   }
 
-  setCache(cacheKey, releases);
+  await setCache(cacheKey, releases, TTL.DISCOGS);
   return releases;
 }
 

@@ -1,3 +1,5 @@
+import { getCached, setCache, TTL } from "./cache";
+
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
@@ -67,15 +69,26 @@ export async function searchPerson(
 }
 
 export async function getPersonDetails(id: number): Promise<TMDBPerson | null> {
+  const cacheKey = `tmdb:person:${id}`;
+  const cached = await getCached<TMDBPerson>(cacheKey);
+  if (cached) return cached;
+
   const url = withKey(`${TMDB_BASE}/person/${id}?language=en-US`);
   const res = await fetch(url);
   if (!res.ok) return null;
-  return res.json();
+
+  const data: TMDBPerson = await res.json();
+  await setCache(cacheKey, data, TTL.TMDB);
+  return data;
 }
 
 export async function getPersonCombinedCredits(
   id: number
 ): Promise<TMDBCombinedCast[]> {
+  const cacheKey = `tmdb:credits:${id}`;
+  const cached = await getCached<TMDBCombinedCast[]>(cacheKey);
+  if (cached) return cached;
+
   const url = withKey(
     `${TMDB_BASE}/person/${id}/combined_credits?language=en-US`
   );
@@ -100,11 +113,14 @@ export async function getPersonCombinedCredits(
         );
 
   // Sort by weighted score: rating * min(vote_count/50, 1)
-  return pool.sort((a, b) => {
+  const sorted = pool.sort((a, b) => {
     const scoreA = a.vote_average * Math.min(a.vote_count / 50, 1);
     const scoreB = b.vote_average * Math.min(b.vote_count / 50, 1);
     return scoreB - scoreA;
   });
+
+  await setCache(cacheKey, sorted, TTL.TMDB);
+  return sorted;
 }
 
 // ── URL builders ──

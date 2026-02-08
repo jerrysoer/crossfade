@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCached, setCache, TTL } from "@/lib/cache";
 import { discoverInputSchema } from "@/lib/schemas";
 import { callClaudeJSON } from "@/lib/ai";
 import {
@@ -55,6 +56,15 @@ export async function POST(request: NextRequest) {
 
     const { previousNames, searchName } = parsed.data;
 
+    // 0. Check cache for named searches (instant repeat lookups)
+    if (searchName) {
+      const resultKey = `cf:result:${searchName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+      const cached = await getCached<CrossoverArtist>(resultKey);
+      if (cached) {
+        return NextResponse.json(cached);
+      }
+    }
+
     // 1. Ask Claude for a crossover artist
     let claude = await callClaudeJSON<ClaudeCrossoverResponse>(
       SYSTEM_PROMPT_CROSSOVER_DISCOVERY,
@@ -108,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Fetch credits first (need top titles for YouTube search)
-    let [combinedCredits, artistReleases] = await Promise.all([
+    const [combinedCredits, initReleases] = await Promise.all([
       getPersonCombinedCredits(tmdbPerson.id),
       discogsResult
         ? getArtistReleases(discogsResult.id, 20)
@@ -116,6 +126,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     // 5b. If Discogs artist found but has 0 releases, try name variants
+    let artistReleases = initReleases;
     if (discogsResult && artistReleases.length === 0) {
       console.log(
         `Discogs artist "${discogsResult.name}" has 0 releases, trying name variants...`
@@ -246,6 +257,12 @@ export async function POST(request: NextRequest) {
       filmClipId,
       musicClipId,
     };
+
+    // Cache named search results for instant repeat lookups
+    if (searchName) {
+      const resultKey = `cf:result:${searchName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+      await setCache(resultKey, artist, TTL.DISCOVER);
+    }
 
     return NextResponse.json(artist);
   } catch (error) {
