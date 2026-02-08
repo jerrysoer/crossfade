@@ -39,21 +39,16 @@ export default function CrossoverCard({
 }: CrossoverCardProps) {
   return (
     <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6">
-      {/* Background glow behind the card */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[60%] rounded-full pointer-events-none opacity-[0.03]"
-        style={{
-          background:
-            "radial-gradient(ellipse, var(--accent-gold) 0%, var(--accent-warm) 40%, transparent 70%)",
-        }}
-      />
-
       {/* Main card */}
       <div
         className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-10 lg:p-12
-                   grain-overlay overflow-hidden
+                   overflow-hidden
                    animate-fade-in-scale opacity-0"
-        style={{ animationDelay: "0.1s" }}
+        style={{
+          animationDelay: "0.1s",
+          borderTop: "3px solid var(--accent-red)",
+          boxShadow: "var(--card-shadow)",
+        }}
       >
         {/* Three-column layout */}
         <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 lg:gap-6">
@@ -108,9 +103,9 @@ export default function CrossoverCard({
         >
           <button
             onClick={onTryAnother}
-            className="px-7 py-2.5 rounded-full bg-[var(--accent-gold)] text-[var(--background)]
+            className="px-7 py-2.5 rounded-full bg-[var(--accent-red)] text-white
                        text-sm font-medium
-                       hover:bg-[#E8B85E] hover:shadow-[0_0_24px_rgba(212,168,83,0.15)]
+                       hover:bg-[#BF2B29] hover:shadow-[0_4px_20px_rgba(214,50,48,0.15)]
                        active:scale-[0.98]
                        transition-all duration-200"
           >

@@ -12,36 +12,23 @@ export default function FilmCreditsList({ credits }: FilmCreditsListProps) {
     <div className="w-full max-w-[280px]">
       {/* Section header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex gap-[3px]">
-          {[...Array(4)].map((_, i) => (
-            <div
-              key={i}
-              className="w-[3px] h-5 rounded-[1px]"
-              style={{
-                background:
-                  i % 2 === 0
-                    ? "var(--accent-gold)"
-                    : "var(--surface-elevated)",
-              }}
-            />
-          ))}
-        </div>
-        <h3 className="text-xs font-medium tracking-[0.25em] uppercase text-[var(--accent-gold)]">
+        <h3 className="text-xs font-semibold tracking-[0.25em] uppercase text-[var(--accent-red)]">
           Film
         </h3>
         <div className="flex-1 h-px bg-[var(--border)]" />
       </div>
 
       {/* Credits list */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col">
         {credits.map((credit, i) => (
           <a
             key={`${credit.tmdbId}-${i}`}
             href={credit.tmdbUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex gap-3 p-2 -mx-2 rounded-lg
-                       hover:bg-[var(--accent-gold-dim)] transition-colors duration-200"
+            className="group flex gap-3 py-3 -mx-2 px-2 rounded-lg
+                       hover:bg-[var(--surface-elevated)] transition-colors duration-150
+                       border-b border-[var(--border)] last:border-b-0"
           >
             {/* Poster thumbnail */}
             <div className="relative w-12 aspect-[2/3] flex-shrink-0 rounded overflow-hidden bg-[var(--surface-elevated)]">
@@ -72,11 +59,11 @@ export default function FilmCreditsList({ credits }: FilmCreditsListProps) {
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[var(--accent-gold)] transition-colors">
+                <p className="text-sm font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[var(--accent-red)] transition-colors">
                   {credit.title}
                 </p>
                 {credit.mediaType === "tv" && (
-                  <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent-gold-dim)] text-[var(--accent-gold)] font-medium uppercase tracking-wider">
+                  <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-[var(--accent-red-dim)] text-[var(--accent-red)] font-medium uppercase tracking-wider">
                     TV
                   </span>
                 )}
@@ -85,14 +72,14 @@ export default function FilmCreditsList({ credits }: FilmCreditsListProps) {
                 {credit.year > 0 ? credit.year : ""}
               </p>
               {credit.character && (
-                <p className="text-xs text-[var(--text-secondary)] mt-1 font-[family-name:var(--font-playfair)] italic truncate">
+                <p className="text-xs text-[var(--text-secondary)] mt-1 font-[family-name:var(--font-lora)] italic truncate">
                   as {credit.character}
                 </p>
               )}
               {credit.rating > 0 && (
                 <div className="flex items-center gap-1 mt-1.5">
                   <svg
-                    className="w-3 h-3 text-[var(--accent-gold)]"
+                    className="w-3 h-3 text-[var(--accent-red)]"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >

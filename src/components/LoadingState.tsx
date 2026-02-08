@@ -19,7 +19,13 @@ export default function LoadingState() {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6">
-      <div className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-10 lg:p-12 overflow-hidden">
+      <div
+        className="relative bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 sm:p-10 lg:p-12 overflow-hidden"
+        style={{
+          borderTop: "3px solid var(--accent-red)",
+          boxShadow: "var(--card-shadow)",
+        }}
+      >
         {/* Shimmer overlay */}
         <div className="absolute inset-0 animate-shimmer" />
 
@@ -27,7 +33,6 @@ export default function LoadingState() {
           {/* Film credits skeleton — left */}
           <div className="flex-1 flex flex-col gap-4 w-full max-w-[280px]">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-5 h-5 rounded bg-[var(--surface-elevated)]" />
               <div className="w-12 h-3 rounded bg-[var(--surface-elevated)]" />
               <div className="flex-1 h-px bg-[var(--border)]" />
             </div>
@@ -48,19 +53,23 @@ export default function LoadingState() {
             {/* Circular photo skeleton */}
             <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[var(--surface-elevated)] animate-shimmer" />
 
-            {/* Spinning vinyl icon */}
-            <div className="relative w-12 h-12 my-2">
+            {/* Simple red dot spinner */}
+            <div className="flex items-center gap-1.5 my-2">
               <div
-                className="absolute inset-0 rounded-full border-2 border-[var(--border)] animate-spin"
-                style={{ animationDuration: "3s" }}
-              >
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[var(--accent-gold)]" />
-              </div>
-              <div className="absolute inset-[30%] rounded-full bg-[var(--surface-elevated)]" />
-              <div className="absolute inset-[42%] rounded-full bg-[var(--accent-gold)] opacity-30" />
+                className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)]"
+                style={{ animation: "pulse-dot 1.2s ease-in-out infinite", animationDelay: "0s" }}
+              />
+              <div
+                className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)]"
+                style={{ animation: "pulse-dot 1.2s ease-in-out infinite", animationDelay: "0.2s" }}
+              />
+              <div
+                className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)]"
+                style={{ animation: "pulse-dot 1.2s ease-in-out infinite", animationDelay: "0.4s" }}
+              />
             </div>
 
-            <p className="font-[family-name:var(--font-playfair)] italic text-[var(--text-muted)] text-sm">
+            <p className="font-[family-name:var(--font-lora)] italic text-[var(--text-muted)] text-sm">
               {message}
             </p>
 
@@ -77,7 +86,6 @@ export default function LoadingState() {
           {/* Music credits skeleton — right */}
           <div className="flex-1 flex flex-col gap-4 w-full max-w-[280px]">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-5 h-5 rounded-full bg-[var(--surface-elevated)]" />
               <div className="w-14 h-3 rounded bg-[var(--surface-elevated)]" />
               <div className="flex-1 h-px bg-[var(--border)]" />
             </div>

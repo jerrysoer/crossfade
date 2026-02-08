@@ -5,7 +5,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Brand */}
           <div className="text-center md:text-left">
-            <p className="font-[family-name:var(--font-playfair)] text-lg text-[var(--text-primary)]">
+            <p className="font-[family-name:var(--font-lora)] text-lg text-[var(--text-primary)]">
               Cross<span className="cross-slash">/</span>Fade
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-1">
@@ -21,7 +21,7 @@ export default function Footer() {
                 href="https://www.themoviedb.org/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[var(--text-secondary)] transition-colors"
+                className="hover:text-[var(--accent-red)] transition-colors"
               >
                 TMDB
               </a>
@@ -31,7 +31,7 @@ export default function Footer() {
                 href="https://www.discogs.com/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-[var(--text-secondary)] transition-colors"
+                className="hover:text-[var(--accent-red)] transition-colors"
               >
                 Discogs
               </a>
@@ -50,7 +50,7 @@ export default function Footer() {
                 href="https://www.anthropic.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--text-secondary)] hover:text-[var(--accent-gold)] transition-colors"
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-red)] transition-colors"
               >
                 Claude
               </a>

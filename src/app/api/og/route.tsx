@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#0A0A08",
+          background: "#F7F4EE",
           fontFamily: "Georgia, serif",
         }}
       >
@@ -41,13 +41,13 @@ export async function GET(request: NextRequest) {
           }}
         >
           <span
-            style={{ color: "#F5F0E8", fontSize: "24px", fontWeight: 700 }}
+            style={{ color: "#1A1917", fontSize: "24px", fontWeight: 700 }}
           >
             Cross
           </span>
           <span
             style={{
-              color: "#D4A853",
+              color: "#D63230",
               fontSize: "20px",
               fontStyle: "italic",
             }}
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             /
           </span>
           <span
-            style={{ fontSize: "24px", fontWeight: 700, color: "#D4A853" }}
+            style={{ fontSize: "24px", fontWeight: 700, color: "#1A1917" }}
           >
             Fade
           </span>
@@ -85,13 +85,13 @@ export async function GET(request: NextRequest) {
                 width: "160px",
                 height: "160px",
                 borderRadius: "50%",
-                background: "#1E1E1A",
+                background: "#EFEBE3",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <span style={{ color: "#5C5647", fontSize: "14px" }}>
+              <span style={{ color: "#9C9890", fontSize: "14px" }}>
                 Artist
               </span>
             </div>
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
           <span
             style={{
-              color: "#F5F0E8",
+              color: "#1A1917",
               fontSize: "36px",
               fontWeight: 700,
             }}
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
           {/* Direction badge */}
           <span
             style={{
-              color: "#D4A853",
+              color: "#D63230",
               fontSize: "14px",
               letterSpacing: "0.15em",
               textTransform: "uppercase",
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
           >
             <span
               style={{
-                color: "#A09880",
+                color: "#5C5955",
                 fontSize: "16px",
                 fontStyle: "italic",
                 lineHeight: 1.6,

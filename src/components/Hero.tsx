@@ -1,5 +1,7 @@
 "use client";
 
+import ThemeToggle from "./ThemeToggle";
+
 interface HeroProps {
   onDiscover: () => void;
   isLoading?: boolean;
@@ -7,48 +9,47 @@ interface HeroProps {
 
 export default function Hero({ onDiscover, isLoading }: HeroProps) {
   return (
-    <section className="relative min-h-[85vh] flex flex-col items-center justify-center px-6 overflow-hidden">
-      {/* Projector glow — warm light spilling from above */}
-      <div className="projector-glow -top-40 left-1/2 -translate-x-1/2" />
-      <div
-        className="absolute top-1/3 -right-32 w-[500px] h-[500px] rounded-full pointer-events-none opacity-[0.04]"
-        style={{
-          background:
-            "radial-gradient(circle, var(--accent-warm) 0%, transparent 70%)",
-        }}
-      />
-
+    <section className="relative min-h-[80vh] flex flex-col items-center justify-center px-6">
+      {/* Theme toggle — top right */}
+      <div className="absolute top-6 right-6 z-20">
+        <ThemeToggle />
+      </div>
       {/* Content */}
       <div className="relative z-10 text-center max-w-3xl mx-auto">
         {/* Eyebrow */}
         <p
-          className="text-xs font-medium tracking-[0.3em] uppercase text-[var(--text-muted)] mb-6
+          className="text-xs font-medium tracking-[0.3em] uppercase text-[var(--accent-red)] mb-6
                      animate-fade-in opacity-0"
           style={{ animationDelay: "0.1s" }}
         >
-          Stage <span className="text-[var(--accent-gold)] mx-1">&times;</span>{" "}
-          Screen
+          Stage &times; Screen
         </p>
 
         {/* Logo / Title */}
         <h1
-          className="font-[family-name:var(--font-playfair)] text-6xl sm:text-7xl md:text-8xl font-bold
+          className="font-[family-name:var(--font-lora)] text-6xl sm:text-7xl md:text-8xl font-bold
                      tracking-tight leading-[0.9] mb-4
                      opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.2s" }}
+          style={{ animationDelay: "0.15s" }}
         >
           <span className="text-[var(--text-primary)]">Cross</span>
           <span className="cross-slash text-5xl sm:text-6xl md:text-7xl mx-1">
             /
           </span>
-          <span className="text-gradient-gold">Fade</span>
+          <span className="text-[var(--text-primary)]">Fade</span>
         </h1>
+
+        {/* Thin editorial rule */}
+        <div
+          className="w-16 h-px bg-[var(--border-dark)] mx-auto mb-4 opacity-0 animate-fade-in"
+          style={{ animationDelay: "0.25s" }}
+        />
 
         {/* Subline */}
         <p
-          className="font-[family-name:var(--font-playfair)] italic text-lg sm:text-xl text-[var(--text-secondary)]
+          className="font-[family-name:var(--font-lora)] italic text-lg sm:text-xl text-[var(--text-secondary)]
                      mb-12 opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.4s" }}
+          style={{ animationDelay: "0.3s" }}
         >
           Where the stage meets the screen
         </p>
@@ -56,14 +57,14 @@ export default function Hero({ onDiscover, isLoading }: HeroProps) {
         {/* Surprise Me button */}
         <div
           className="opacity-0 animate-fade-in-up"
-          style={{ animationDelay: "0.6s" }}
+          style={{ animationDelay: "0.4s" }}
         >
           <button
             onClick={onDiscover}
             disabled={isLoading}
-            className="px-10 py-4 rounded-full bg-[var(--accent-gold)] text-[var(--background)]
+            className="px-10 py-4 rounded-full bg-[var(--accent-red)] text-white
                        text-lg font-medium tracking-wide
-                       hover:bg-[#E8B85E] hover:shadow-[0_0_32px_rgba(212,168,83,0.2)]
+                       hover:bg-[#BF2B29] hover:shadow-[0_4px_20px_rgba(214,50,48,0.2)]
                        active:scale-[0.98]
                        transition-all duration-200
                        disabled:opacity-50 disabled:cursor-not-allowed"
@@ -75,9 +76,6 @@ export default function Hero({ onDiscover, isLoading }: HeroProps) {
           </p>
         </div>
       </div>
-
-      {/* Bottom fade to surface */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
     </section>
   );
 }

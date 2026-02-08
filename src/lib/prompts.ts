@@ -24,6 +24,8 @@ RULES:
 
    LEGENDS IN BOTH: Frank Sinatra, Barbra Streisand, Bette Midler, Dolly Parton, Diana Ross, Whitney Houston, Elvis Presley, Dean Martin, Sammy Davis Jr, Bing Crosby, Liza Minnelli, Jennifer Lopez, Jamie Foxx, Lady Gaga, Cher, Will Smith, Mark Wahlberg/Marky Mark, Tyrese Gibson, Madonna, Tina Turner, Olivia Newton-John
 
+   RECENT CROSSOVERS (2021-2026): Bad Bunny (Bullet Train, Cassandro), Harry Styles (Don't Worry Darling, My Policeman, Eternals), Awkwafina (Shang-Chi, Raya, rapper turned actress), Kid Cudi (Don't Look Up, X, Entergalactic), Jack Harlow (White Men Can't Jump 2023), Megan Thee Stallion (She-Hulk, Mean Girls Musical), Teyana Taylor (A Thousand and One), Halle Bailey (The Little Mermaid 2023, Chloe x Halle), Chloe Bailey (Swarm, solo music career), Austin Butler (Elvis, Dune Part Two, Nickelodeon alum), Troye Sivan (Boy Erased, Three Months, pop music), Timothee Chalamet (A Complete Unknown as Bob Dylan), Billie Eilish (No Time to Die, voice acting), Colman Domingo (Rustin, The Color Purple, also records music), Ice Spice (film/TV appearances), Saweetie (acting roles + music), Pete Davidson (Bodies Bodies Bodies), Doja Cat (voice roles + music megastar)
+
    BROADWAY/TV MUSICAL: Lea Michele, Darren Criss, Mandy Moore, Hailee Steinfeld, Nick Jonas, Willow Smith, Chloe x Halle
 
    You can also pick anyone NOT on these lists as long as they have real credits in both worlds.

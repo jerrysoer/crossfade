@@ -12,29 +12,23 @@ export default function MusicCreditsList({ credits }: MusicCreditsListProps) {
     <div className="w-full max-w-[280px]">
       {/* Section header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="relative w-5 h-5">
-          <div
-            className="absolute inset-0 rounded-full border border-[var(--accent-warm)]"
-            style={{ opacity: 0.6 }}
-          />
-          <div className="absolute inset-[35%] rounded-full bg-[var(--accent-warm)] opacity-50" />
-        </div>
-        <h3 className="text-xs font-medium tracking-[0.25em] uppercase text-[var(--accent-warm)]">
+        <h3 className="text-xs font-semibold tracking-[0.25em] uppercase text-[var(--text-primary)]">
           Music
         </h3>
         <div className="flex-1 h-px bg-[var(--border)]" />
       </div>
 
       {/* Credits list */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col">
         {credits.map((credit, i) => (
           <a
             key={`${credit.discogsId}-${i}`}
             href={credit.discogsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex gap-3 p-2 -mx-2 rounded-lg
-                       hover:bg-[var(--accent-warm-dim)] transition-colors duration-200"
+            className="group flex gap-3 py-3 -mx-2 px-2 rounded-lg
+                       hover:bg-[var(--surface-elevated)] transition-colors duration-150
+                       border-b border-[var(--border)] last:border-b-0"
           >
             {/* Cover thumbnail */}
             <div className="relative w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-[var(--surface-elevated)]">
@@ -64,7 +58,7 @@ export default function MusicCreditsList({ credits }: MusicCreditsListProps) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[var(--accent-warm)] transition-colors">
+              <p className="text-sm font-medium text-[var(--text-primary)] leading-tight truncate group-hover:text-[var(--accent-red)] transition-colors">
                 {credit.title}
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
@@ -78,7 +72,7 @@ export default function MusicCreditsList({ credits }: MusicCreditsListProps) {
                     <span
                       key={genre}
                       className="text-[10px] px-1.5 py-0.5 rounded-full
-                                 bg-[var(--accent-warm-dim)] text-[var(--text-muted)]"
+                                 bg-[var(--surface-elevated)] text-[var(--text-muted)]"
                     >
                       {genre}
                     </span>

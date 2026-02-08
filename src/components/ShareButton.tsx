@@ -36,13 +36,13 @@ export default function ShareButton({ artistName }: ShareButtonProps) {
       onClick={handleShare}
       className="flex items-center gap-2 px-5 py-2.5 rounded-full
                  border border-[var(--border)] text-sm text-[var(--text-secondary)]
-                 hover:border-[var(--accent-gold)] hover:text-[var(--text-primary)]
+                 hover:border-[var(--accent-red)] hover:text-[var(--accent-red)]
                  transition-all duration-200"
     >
       {copied ? (
         <>
           <svg
-            className="w-4 h-4 text-[var(--accent-gold)]"
+            className="w-4 h-4 text-[var(--accent-red)]"
             viewBox="0 0 20 20"
             fill="currentColor"
           >
