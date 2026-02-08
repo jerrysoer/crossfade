@@ -62,6 +62,21 @@ function setCache(key: string, data: unknown) {
   cache.set(key, { data, expires: Date.now() + TTL });
 }
 
+// ── Name matching ──
+
+function normalizeForComparison(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s*\(\d+\)\s*$/, "") // Discogs disambiguation like "John Smith (2)"
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function namesMatch(searchName: string, resultName: string): boolean {
+  const a = normalizeForComparison(searchName);
+  const b = normalizeForComparison(resultName);
+  return a === b || b.includes(a) || a.includes(b);
+}
+
 // ── Types ──
 
 interface DiscogsSearchResult {
@@ -109,27 +124,45 @@ interface DiscogsArtistReleasesResponse {
 
 // ── Artist endpoints ──
 
-export async function searchArtist(name: string): Promise<DiscogsSearchResult | null> {
-  const cacheKey = `artist-search:${name}`;
-  const cached = getCached<DiscogsSearchResult>(cacheKey);
-  if (cached) return cached;
+export async function searchArtist(
+  names: string | string[]
+): Promise<DiscogsSearchResult | null> {
+  const nameList = Array.isArray(names) ? names : [names];
 
-  await acquireToken();
+  for (const name of nameList) {
+    const cacheKey = `artist-search:${name}`;
+    const cached = getCached<DiscogsSearchResult>(cacheKey);
+    if (cached) return cached;
 
-  const params = new URLSearchParams({
-    q: name,
-    type: "artist",
-    per_page: "5",
-  });
+    await acquireToken();
 
-  const url = `${DISCOGS_BASE}/database/search?${params}`;
-  const res = await fetch(url, { headers: getHeaders() });
-  if (!res.ok) return null;
+    const params = new URLSearchParams({
+      q: name,
+      type: "artist",
+      per_page: "10",
+    });
 
-  const data: DiscogsSearchResponse = await res.json();
-  const result = data.results[0] ?? null;
-  if (result) setCache(cacheKey, result);
-  return result;
+    const url = `${DISCOGS_BASE}/database/search?${params}`;
+    const res = await fetch(url, { headers: getHeaders() });
+    if (!res.ok) continue;
+
+    const data: DiscogsSearchResponse = await res.json();
+    if (data.results.length === 0) continue;
+
+    // Try exact match first
+    const exactMatch = data.results.find((r) => namesMatch(name, r.title));
+    if (exactMatch) {
+      setCache(cacheKey, exactMatch);
+      return exactMatch;
+    }
+
+    // Fall back to first result (original behavior as last resort)
+    const first = data.results[0];
+    setCache(cacheKey, first);
+    return first;
+  }
+
+  return null;
 }
 
 export async function getArtist(id: number): Promise<DiscogsArtist | null> {
@@ -150,7 +183,7 @@ export async function getArtist(id: number): Promise<DiscogsArtist | null> {
 
 export async function getArtistReleases(
   id: number,
-  limit: number = 10
+  limit: number = 20
 ): Promise<DiscogsArtistRelease[]> {
   const cacheKey = `artist-releases:${id}:${limit}`;
   const cached = getCached<DiscogsArtistRelease[]>(cacheKey);
@@ -164,14 +197,21 @@ export async function getArtistReleases(
 
   const data: DiscogsArtistReleasesResponse = await res.json();
 
-  // Prefer main releases that are master-level (albums, not individual pressings)
+  // Tier 1: Main artist on master releases (albums)
   let releases = data.releases.filter(
     (r) => r.role === "Main" && r.type === "master"
   );
 
-  // Fallback: include regular releases if too few masters
+  // Tier 2: Any Main releases (singles, EPs, compilations)
   if (releases.length < 3) {
     releases = data.releases.filter((r) => r.role === "Main");
+  }
+
+  // Tier 3: Include TrackAppearance (features, soundtracks)
+  if (releases.length < 2) {
+    releases = data.releases.filter(
+      (r) => r.role === "Main" || r.role === "TrackAppearance"
+    );
   }
 
   setCache(cacheKey, releases);

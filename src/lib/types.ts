@@ -8,6 +8,7 @@ export interface FilmCredit {
   tmdbId: number;
   tmdbUrl: string;
   rating: number;
+  mediaType?: "movie" | "tv";
 }
 
 export interface MusicCredit {
@@ -39,6 +40,7 @@ export interface ClaudeCrossoverResponse {
   didYouKnow: string;
   tmdbSearchQuery: string;
   discogsSearchQuery: string;
+  alternateNames?: string[];
   tmdbId?: number;
   discogsId?: number;
 }

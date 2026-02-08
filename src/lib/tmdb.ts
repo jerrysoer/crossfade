@@ -26,29 +26,41 @@ interface TMDBPersonSearchResponse {
   results: TMDBPerson[];
 }
 
-interface TMDBMovieCast {
+export interface TMDBCombinedCast {
   id: number;
-  title: string;
+  title?: string; // movies
+  name?: string; // TV shows
   character: string;
-  release_date: string;
+  release_date?: string; // movies
+  first_air_date?: string; // TV shows
   poster_path: string | null;
   vote_average: number;
   vote_count: number;
+  media_type: "movie" | "tv";
 }
 
-interface TMDBPersonMovieCredits {
-  cast: TMDBMovieCast[];
+interface TMDBCombinedCredits {
+  cast: TMDBCombinedCast[];
 }
 
 // ── Person endpoints ──
 
-export async function searchPerson(name: string): Promise<TMDBPerson | null> {
-  const url = withKey(`${TMDB_BASE}/search/person?query=${encodeURIComponent(name)}&language=en-US&page=1`);
-  const res = await fetch(url);
-  if (!res.ok) return null;
+export async function searchPerson(
+  names: string | string[]
+): Promise<TMDBPerson | null> {
+  const nameList = Array.isArray(names) ? names : [names];
 
-  const data: TMDBPersonSearchResponse = await res.json();
-  return data.results[0] ?? null;
+  for (const name of nameList) {
+    const url = withKey(
+      `${TMDB_BASE}/search/person?query=${encodeURIComponent(name)}&language=en-US&page=1`
+    );
+    const res = await fetch(url);
+    if (!res.ok) continue;
+
+    const data: TMDBPersonSearchResponse = await res.json();
+    if (data.results.length > 0) return data.results[0];
+  }
+  return null;
 }
 
 export async function getPersonDetails(id: number): Promise<TMDBPerson | null> {
@@ -58,19 +70,33 @@ export async function getPersonDetails(id: number): Promise<TMDBPerson | null> {
   return res.json();
 }
 
-export async function getPersonMovieCredits(id: number): Promise<TMDBMovieCast[]> {
-  const url = withKey(`${TMDB_BASE}/person/${id}/movie_credits?language=en-US`);
+export async function getPersonCombinedCredits(
+  id: number
+): Promise<TMDBCombinedCast[]> {
+  const url = withKey(
+    `${TMDB_BASE}/person/${id}/combined_credits?language=en-US`
+  );
   const res = await fetch(url);
   if (!res.ok) return [];
 
-  const data: TMDBPersonMovieCredits = await res.json();
-  const isSelf = (c: string) => /^(self|himself|herself|themselves)\b/i.test(c.trim());
-  const actingRoles = data.cast.filter((c) => c.release_date && c.character && !isSelf(c.character));
+  const data: TMDBCombinedCredits = await res.json();
+  const isSelf = (c: string) =>
+    /^(self|himself|herself|themselves)\b/i.test(c.trim());
+
+  const actingRoles = data.cast.filter((c) => {
+    const hasDate = c.release_date || c.first_air_date;
+    return hasDate && c.character && !isSelf(c.character);
+  });
+
   // Prefer actual acting roles, fall back to "Self" credits if too few
-  const pool = actingRoles.length >= 3
-    ? actingRoles
-    : data.cast.filter((c) => c.release_date && c.character);
-  // Sort by weighted score: rating matters, but heavily penalize films with very few votes
+  const pool =
+    actingRoles.length >= 3
+      ? actingRoles
+      : data.cast.filter(
+          (c) => (c.release_date || c.first_air_date) && c.character
+        );
+
+  // Sort by weighted score: rating * min(vote_count/50, 1)
   return pool.sort((a, b) => {
     const scoreA = a.vote_average * Math.min(a.vote_count / 50, 1);
     const scoreB = b.vote_average * Math.min(b.vote_count / 50, 1);
@@ -102,4 +128,8 @@ export function tmdbPersonUrl(id: number): string {
 
 export function tmdbMovieUrl(id: number): string {
   return `https://www.themoviedb.org/movie/${id}`;
+}
+
+export function tmdbTvUrl(id: number): string {
+  return `https://www.themoviedb.org/tv/${id}`;
 }

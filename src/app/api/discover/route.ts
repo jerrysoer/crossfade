@@ -8,10 +8,11 @@ import {
 import {
   searchPerson,
   getPersonDetails,
-  getPersonMovieCredits,
+  getPersonCombinedCredits,
   profilePhotoUrl,
   posterUrl,
   tmdbMovieUrl,
+  tmdbTvUrl,
 } from "@/lib/tmdb";
 import {
   searchArtist,
@@ -27,6 +28,17 @@ import type {
   FilmCredit,
   MusicCredit,
 } from "@/lib/types";
+
+function collectSearchNames(claude: ClaudeCrossoverResponse): string[] {
+  const names = new Set<string>();
+  names.add(claude.name);
+  names.add(claude.tmdbSearchQuery);
+  names.add(claude.discogsSearchQuery);
+  if (claude.alternateNames) {
+    claude.alternateNames.forEach((n) => names.add(n));
+  }
+  return Array.from(names);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,29 +61,29 @@ export async function POST(request: NextRequest) {
       { maxTokens: 1024, temperature: 0.9 }
     );
 
-    // 2. Validate against TMDB + Discogs in parallel
+    // 2. Validate against TMDB + Discogs in parallel (using all known names)
+    let allNames = collectSearchNames(claude);
     let [tmdbPerson, discogsResult] = await Promise.all([
-      resolveTMDBPerson(claude),
-      resolveDiscogsArtist(claude),
+      resolveTMDBPerson(claude, allNames),
+      resolveDiscogsArtist(claude, allNames),
     ]);
 
-    // 3. Retry once if TMDB fails (required), Discogs is best-effort
+    // 3. If TMDB fails, ask Claude for a different artist
     if (!tmdbPerson) {
-      const failedOn = !discogsResult ? "TMDB and Discogs" : "TMDB";
-
       console.log(
-        `Retry: "${claude.name}" not found on ${failedOn}. Asking Claude for another pick.`
+        `Retry: "${claude.name}" not found on TMDB. Asking Claude for another pick.`
       );
 
       claude = await callClaudeJSON<ClaudeCrossoverResponse>(
         SYSTEM_PROMPT_CROSSOVER_DISCOVERY,
-        `Your previous pick "${claude.name}" could not be found on ${failedOn}. Pick a DIFFERENT crossover artist. Make sure they are well-known enough to appear on both TMDB and Discogs.\n\nDo NOT pick: ${[...previousNames, claude.name].join(", ")}`,
+        `Your previous pick "${claude.name}" could not be found on TMDB. Pick a DIFFERENT, well-known crossover artist. Make sure you provide accurate search names and alternate names.\n\nDo NOT pick: ${[...previousNames, claude.name].join(", ")}`,
         { maxTokens: 1024, temperature: 0.9 }
       );
 
+      allNames = collectSearchNames(claude);
       [tmdbPerson, discogsResult] = await Promise.all([
-        resolveTMDBPerson(claude),
-        resolveDiscogsArtist(claude),
+        resolveTMDBPerson(claude, allNames),
+        resolveDiscogsArtist(claude, allNames),
       ]);
 
       if (!tmdbPerson) {
@@ -82,35 +94,67 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Fetch credits in parallel
-    const [movieCredits, artistReleases] = await Promise.all([
-      getPersonMovieCredits(tmdbPerson.id),
-      discogsResult ? getArtistReleases(discogsResult.id, 10) : Promise.resolve([]),
+    // 4. If Discogs still failed, try with TMDB person's canonical name
+    if (!discogsResult && tmdbPerson) {
+      console.log(
+        `Discogs miss, trying TMDB canonical name: "${tmdbPerson.name}"`
+      );
+      const fallbackNames = [tmdbPerson.name, ...allNames];
+      const searchResult = await searchArtist(fallbackNames);
+      if (searchResult) {
+        discogsResult = await getArtist(searchResult.id);
+      }
+    }
+
+    // 5. Fetch credits in parallel
+    const [combinedCredits, artistReleases] = await Promise.all([
+      getPersonCombinedCredits(tmdbPerson.id),
+      discogsResult
+        ? getArtistReleases(discogsResult.id, 20)
+        : Promise.resolve([]),
     ]);
 
-    // 5. Map to our types
-    const filmCredits: FilmCredit[] = movieCredits.slice(0, 5).map((c) => ({
-      title: c.title,
-      year: parseInt(c.release_date?.split("-")[0] ?? "0"),
+    // 6. Map to our types
+    const filmCredits: FilmCredit[] = combinedCredits.slice(0, 5).map((c) => ({
+      title: c.title || c.name || "Unknown",
+      year: parseInt(
+        (c.release_date || c.first_air_date || "0").split("-")[0]
+      ),
       character: c.character,
       posterUrl: posterUrl(c.poster_path, "w342"),
       tmdbId: c.id,
-      tmdbUrl: tmdbMovieUrl(c.id),
+      tmdbUrl:
+        c.media_type === "tv" ? tmdbTvUrl(c.id) : tmdbMovieUrl(c.id),
       rating: Math.round(c.vote_average * 10) / 10,
+      mediaType: c.media_type,
     }));
 
-    const musicCredits: MusicCredit[] = artistReleases.slice(0, 5).map((r) => ({
-      title: r.title,
-      artist: r.artist || claude.name,
-      year: r.year ?? 0,
-      coverUrl: r.thumb && !r.thumb.includes("spacer.gif") ? r.thumb : null,
-      discogsId: r.id,
-      discogsUrl: discogsResult ? discogsArtistUrl(discogsResult.id) : "",
-      genres: [],
-      label: r.label || "",
-    }));
+    const musicCredits: MusicCredit[] = artistReleases
+      .slice(0, 5)
+      .map((r) => ({
+        title: r.title,
+        artist: r.artist || claude.name,
+        year: r.year ?? 0,
+        coverUrl:
+          r.thumb && !r.thumb.includes("spacer.gif") ? r.thumb : null,
+        discogsId: r.id,
+        discogsUrl: discogsResult ? discogsArtistUrl(discogsResult.id) : "",
+        genres: [],
+        label: r.label || "",
+      }));
 
-    // 6. Build photo URL — prefer TMDB (higher quality)
+    // 7. Minimum credit check
+    if (filmCredits.length === 0 && musicCredits.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Couldn't find enough credits for this artist. Please try again.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // 8. Build photo URL — prefer TMDB (higher quality)
     const photoUrl =
       profilePhotoUrl(tmdbPerson.profile_path) ??
       (discogsResult ? artistImageUrl(discogsResult) : null);
@@ -141,22 +185,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function resolveTMDBPerson(claude: ClaudeCrossoverResponse) {
+async function resolveTMDBPerson(
+  claude: ClaudeCrossoverResponse,
+  allNames: string[]
+) {
   if (claude.tmdbId) {
     const person = await getPersonDetails(claude.tmdbId);
     if (person) return person;
   }
-  return searchPerson(claude.tmdbSearchQuery);
+  return searchPerson(allNames);
 }
 
 async function resolveDiscogsArtist(
-  claude: ClaudeCrossoverResponse
+  claude: ClaudeCrossoverResponse,
+  allNames: string[]
 ): Promise<DiscogsArtist | null> {
   if (claude.discogsId) {
     const artist = await getArtist(claude.discogsId);
     if (artist) return artist;
   }
-  const searchResult = await searchArtist(claude.discogsSearchQuery);
+  const searchResult = await searchArtist(allNames);
   if (!searchResult) return null;
   return getArtist(searchResult.id);
 }
