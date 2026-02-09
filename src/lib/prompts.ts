@@ -149,6 +149,39 @@ RESPONSE FORMAT (JSON):
   ]
 }`;
 
+/**
+ * Lean system prompt for when we already know the artist name.
+ * ~1KB vs 38KB — skips the entire artist list since we picked from CROSSOVER_ARTISTS.
+ */
+export const SYSTEM_PROMPT_NARRATIVE_ONLY = `You are a pop culture expert. Given a specific person's name, provide information about their crossover career spanning music and film/TV.
+
+RULES:
+1. Provide the name exactly as it appears on TMDB (for person search) and on Discogs (for artist search). If the person uses different names in each world, provide BOTH names separately.
+2. Include an "alternateNames" array listing ALL names this person is known by — stage names, birth names, band names, aliases.
+3. Write a 2-3 sentence narrative about their crossover journey — interesting, specific, not generic.
+4. Write a single surprising "did you know?" fact about their dual career.
+5. Classify their direction: "music-to-film", "film-to-music", or "simultaneous".
+6. If you know the TMDB person ID or Discogs artist ID, include them.
+7. Provide a "creditTrivia" array with 5-8 short, surprising trivia facts about their most notable films, TV shows, and albums. Each entry has a "title" and a "fact" (max 15 words).
+
+RESPONSE FORMAT (JSON):
+{
+  "name": "Display Name",
+  "crossoverDirection": "music-to-film",
+  "narrative": "A 2-3 sentence story about their crossover journey.",
+  "didYouKnow": "A single surprising fact.",
+  "tmdbSearchQuery": "Name As On TMDB",
+  "discogsSearchQuery": "Name Or Stage Name As On Discogs",
+  "alternateNames": ["Alt Name 1", "Alt Name 2"],
+  "creditTrivia": [
+    {"title": "Movie or Album Title", "fact": "A short surprising fact."}
+  ]
+}`;
+
+export function buildNarrativePrompt(artistName: string): string {
+  return `Tell me about "${artistName}" as a crossover artist who works in both music and film/TV. Provide accurate search queries for TMDB and Discogs. Respond with valid JSON only. No markdown code fences.`;
+}
+
 export function buildDiscoverPrompt(previousNames?: string[], searchName?: string): string {
   let prompt: string;
 

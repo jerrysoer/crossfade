@@ -66,3 +66,43 @@ export async function callClaudeJSON<T>(
     );
   }
 }
+
+/**
+ * Streaming version of callClaudeJSON — uses the Anthropic streaming API
+ * for faster time-to-first-token. Accumulates text and parses JSON when done.
+ */
+export async function callClaudeJSONStream<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  options?: { maxTokens?: number; temperature?: number; model?: string }
+): Promise<T> {
+  const anthropic = getClient();
+
+  let text = "";
+  const stream = anthropic.messages.stream({
+    model: options?.model ?? DEFAULT_MODEL,
+    max_tokens: options?.maxTokens ?? 4096,
+    temperature: options?.temperature ?? 0.7,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  for await (const event of stream) {
+    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+      text += event.delta.text;
+    }
+  }
+
+  const cleaned = text
+    .replace(/^```(?:json)?\n?/gm, "")
+    .replace(/\n?```$/gm, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch (e) {
+    throw new Error(
+      `Failed to parse Claude JSON stream response: ${e instanceof Error ? e.message : "Unknown error"}`
+    );
+  }
+}

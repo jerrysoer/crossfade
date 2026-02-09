@@ -78,7 +78,7 @@ export default function CrossoverCard({
             style={{ animationDelay: "0.3s" }}
           >
             {artist.filmCredits.length > 0 ? (
-              <FilmCreditsList credits={artist.filmCredits} clipId={artist.filmClipId} />
+              <FilmCreditsList credits={artist.filmCredits} />
             ) : isStreaming ? (
               <CreditsLoadingSkeleton />
             ) : (
@@ -111,7 +111,7 @@ export default function CrossoverCard({
             style={{ animationDelay: "0.4s" }}
           >
             {artist.musicCredits.length > 0 ? (
-              <MusicCreditsList credits={artist.musicCredits} clipId={artist.musicClipId} />
+              <MusicCreditsList credits={artist.musicCredits} />
             ) : isStreaming ? (
               <CreditsLoadingSkeleton />
             ) : (

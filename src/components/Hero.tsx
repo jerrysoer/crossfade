@@ -6,10 +6,11 @@ import SearchInput from "./SearchInput";
 interface HeroProps {
   onDiscover: () => void;
   onSearch: (name: string) => void;
+  onPrefetch?: () => void;
   isLoading?: boolean;
 }
 
-export default function Hero({ onDiscover, onSearch, isLoading }: HeroProps) {
+export default function Hero({ onDiscover, onSearch, onPrefetch, isLoading }: HeroProps) {
   return (
     <section className="relative min-h-[80vh] flex flex-col items-center justify-center px-6">
       {/* Theme toggle — top right */}
@@ -63,6 +64,8 @@ export default function Hero({ onDiscover, onSearch, isLoading }: HeroProps) {
         >
           <button
             onClick={onDiscover}
+            onMouseEnter={onPrefetch}
+            onTouchStart={onPrefetch}
             disabled={isLoading}
             className="px-10 py-4 rounded-full bg-[var(--accent-red)] text-white
                        text-lg font-medium tracking-wide

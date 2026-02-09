@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CROSSOVER_ARTISTS } from "@/lib/artists";
 import { getCached, setCache, rpush, llen, TTL } from "@/lib/cache";
+import { CROSSOVER_ARTISTS } from "@/lib/artists";
 import { callClaudeJSONStream } from "@/lib/ai";
 import {
   SYSTEM_PROMPT_NARRATIVE_ONLY,
@@ -29,75 +29,86 @@ import type {
   MusicCredit,
 } from "@/lib/types";
 
-const CRON_INDEX_KEY = "cf:cron:index";
 const QUEUE_KEY = "cf:queue:random";
 const TARGET_QUEUE_SIZE = 100;
-const BATCH_SIZE = 5;
 
-export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
+/**
+ * Direct queue filler — processes artists without HTTP round-trips.
+ * Call with POST { count: 10, secret: "..." } to fill the queue.
+ */
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => ({}));
+  const secret = body.secret;
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (cronSecret && secret !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const currentIndex = (await getCached<number>(CRON_INDEX_KEY)) ?? 0;
-    const nextIndex = (currentIndex + 1) % CROSSOVER_ARTISTS.length;
-    await setCache(CRON_INDEX_KEY, nextIndex, TTL.DISCOVER);
+  const count = Math.min(body.count ?? 10, 20);
+  const queueSize = await llen(QUEUE_KEY);
 
-    // Pre-compute artists directly (no HTTP round-trips)
-    let queueSize = await llen(QUEUE_KEY);
-    const added: string[] = [];
-
-    if (queueSize < TARGET_QUEUE_SIZE) {
-      const count = Math.min(BATCH_SIZE, TARGET_QUEUE_SIZE - queueSize);
-
-      // Pick random artists starting from cron index
-      const artists: string[] = [];
-      for (let i = 0; i < count; i++) {
-        artists.push(CROSSOVER_ARTISTS[(currentIndex + i) % CROSSOVER_ARTISTS.length]);
-      }
-
-      // Process in parallel
-      const results = await Promise.allSettled(
-        artists.map((name) => processArtist(name))
-      );
-
-      for (const result of results) {
-        if (result.status === "fulfilled" && result.value) {
-          await rpush(QUEUE_KEY, result.value);
-          added.push(result.value.name);
-          queueSize++;
-        }
-      }
-    }
-
-    console.log(`Cron: processed ${added.length} artists (queue: ${queueSize})`);
-
+  if (queueSize >= TARGET_QUEUE_SIZE) {
     return NextResponse.json({
       status: "ok",
-      index: currentIndex,
-      nextIndex,
-      totalArtists: CROSSOVER_ARTISTS.length,
+      message: "Queue already full",
       queueSize,
-      added,
     });
-  } catch (error) {
-    console.error("Cron warm-cache error:", error);
-    return NextResponse.json(
-      { error: "Internal error during cache warming" },
-      { status: 500 }
-    );
   }
+
+  const toFill = Math.min(count, TARGET_QUEUE_SIZE - queueSize);
+
+  // Pick random artists and process them in parallel batches of 3
+  // (limited by Discogs rate limiter + Claude concurrency)
+  const BATCH_SIZE = 3;
+  const added: string[] = [];
+  const errors: string[] = [];
+
+  const shuffled = [...CROSSOVER_ARTISTS].sort(() => Math.random() - 0.5);
+  let artistIndex = 0;
+
+  for (let filled = 0; filled < toFill && artistIndex < shuffled.length; ) {
+    const batchNames = shuffled.slice(artistIndex, artistIndex + BATCH_SIZE);
+    artistIndex += BATCH_SIZE;
+
+    const results = await Promise.allSettled(
+      batchNames.map((name) => processArtist(name))
+    );
+
+    for (let i = 0; i < results.length && filled < toFill; i++) {
+      const result = results[i];
+      if (result.status === "fulfilled" && result.value) {
+        await rpush(QUEUE_KEY, result.value);
+        added.push(result.value.name);
+        filled++;
+      } else if (result.status === "rejected") {
+        errors.push(`${batchNames[i]}: ${result.reason?.message ?? "unknown"}`);
+      }
+    }
+  }
+
+  const finalQueueSize = await llen(QUEUE_KEY);
+
+  return NextResponse.json({
+    status: "ok",
+    added,
+    errors: errors.slice(0, 5),
+    queueSize: finalQueueSize,
+    addedCount: added.length,
+  });
 }
 
+/**
+ * Process a single artist: Claude narrative + TMDB + Discogs all in parallel.
+ * Returns the full CrossoverArtist or null on failure.
+ */
 async function processArtist(artistName: string): Promise<CrossoverArtist | null> {
+  // Check if already cached
   const resultKey = `cf:result:${artistName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
   const cached = await getCached<CrossoverArtist>(resultKey);
   if (cached) return cached;
 
+  // All three in parallel
   const [claude, tmdbPerson, discogsArtist] = await Promise.all([
     callClaudeJSONStream<ClaudeCrossoverResponse>(
       SYSTEM_PROMPT_NARRATIVE_ONLY,
@@ -108,13 +119,19 @@ async function processArtist(artistName: string): Promise<CrossoverArtist | null
     searchAndGetArtist(artistName),
   ]);
 
-  if (!tmdbPerson) return null;
+  if (!tmdbPerson) {
+    console.error(`fill-queue: TMDB not found for "${artistName}"`);
+    return null;
+  }
 
   let capturedDiscogs = discogsArtist;
+
+  // Discogs fallback
   if (!capturedDiscogs) {
     capturedDiscogs = await searchAndGetArtist([tmdbPerson.name, artistName]);
   }
 
+  // Credits + releases in parallel
   const [combinedCredits, initReleases] = await Promise.all([
     getPersonCombinedCredits(tmdbPerson.id),
     capturedDiscogs
@@ -122,6 +139,7 @@ async function processArtist(artistName: string): Promise<CrossoverArtist | null
       : Promise.resolve([]),
   ]);
 
+  // Variant search for releases if needed
   let artistReleases = initReleases;
   if (capturedDiscogs && artistReleases.length === 0) {
     const allNames = [artistName, claude.name, claude.tmdbSearchQuery, claude.discogsSearchQuery];
@@ -130,7 +148,9 @@ async function processArtist(artistName: string): Promise<CrossoverArtist | null
       return parts.length >= 2 && parts[0].length >= 4 ? [parts[0]] : [];
     });
     if (nameVariants.length > 0) {
-      const variantResults = await Promise.all(nameVariants.map((v) => searchArtist(v)));
+      const variantResults = await Promise.all(
+        nameVariants.map((v) => searchArtist(v))
+      );
       for (const altResult of variantResults) {
         if (altResult && altResult.id !== capturedDiscogs.id) {
           const altReleases = await getArtistReleases(altResult.id, 20);
@@ -171,6 +191,7 @@ async function processArtist(artistName: string): Promise<CrossoverArtist | null
     label: r.label || "",
   }));
 
+  // Match trivia
   if (claude.creditTrivia) {
     const triviaEntries = claude.creditTrivia.map((t) => ({
       key: t.title.toLowerCase().replace(/[^a-z0-9\s]/g, ""),
@@ -196,17 +217,23 @@ async function processArtist(artistName: string): Promise<CrossoverArtist | null
   }
 
   const artist: CrossoverArtist = {
-    name: claude.name, slug, photoUrl,
+    name: claude.name,
+    slug,
+    photoUrl,
     narrative: claude.narrative,
     didYouKnow: claude.didYouKnow,
     crossoverDirection: claude.crossoverDirection,
-    filmCredits, musicCredits,
+    filmCredits,
+    musicCredits,
     birthday: tmdbPerson.birthday ?? null,
     birthplace: tmdbPerson.place_of_birth ?? null,
     deathday: tmdbPerson.deathday ?? null,
-    filmClipId: null, musicClipId: null,
+    filmClipId: null,
+    musicClipId: null,
   };
 
+  // Cache the result for 7 days
   await setCache(resultKey, artist, TTL.DISCOVER);
+
   return artist;
 }

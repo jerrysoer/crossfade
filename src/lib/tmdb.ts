@@ -130,6 +130,20 @@ export async function getPersonCombinedCredits(
   return sorted;
 }
 
+/**
+ * Search + get details in one call — eliminates the sequential waterfall.
+ * Returns full person details (birthday, birthplace, etc.) from a single function.
+ */
+export async function searchAndGetPerson(
+  names: string | string[]
+): Promise<TMDBPerson | null> {
+  const result = await searchPerson(names);
+  if (!result) return null;
+  // searchPerson returns a search result (no birthday/birthplace).
+  // Fetch full details, falling back to search result if details fail.
+  return (await getPersonDetails(result.id)) ?? result;
+}
+
 // ── URL builders ──
 
 export function posterUrl(

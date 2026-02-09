@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
 import LoadingState from "@/components/LoadingState";
-import CrossoverCard from "@/components/CrossoverCard";
 import ThemeToggle from "@/components/ThemeToggle";
 import type { CrossoverArtist } from "@/lib/types";
+
+const CrossoverCard = dynamic(() => import("@/components/CrossoverCard"), {
+  loading: () => <LoadingState />,
+});
 
 function updateOgMeta(artist: CrossoverArtist | null) {
   if (typeof document === "undefined") return;
@@ -46,6 +50,20 @@ export default function Home() {
     }
   }, [seenNames]);
 
+  // Hover-to-prefetch: start API call on mouseenter, use result on click
+  const prefetchRef = useRef<Promise<Response> | null>(null);
+  const prefetchedRef = useRef(false);
+
+  const handlePrefetch = useCallback(() => {
+    if (prefetchedRef.current || isLoading || result) return;
+    prefetchedRef.current = true;
+    prefetchRef.current = fetch("/api/discover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ previousNames: seenNames }),
+    });
+  }, [isLoading, result, seenNames]);
+
   // Restore result from URL hash on mount
   useEffect(() => {
     if (window.location.hash) {
@@ -71,14 +89,22 @@ export default function Home() {
     window.history.replaceState(null, "", "/");
 
     try {
-      const res = await fetch("/api/discover", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          previousNames: seenNames,
-          ...(searchName && { searchName }),
-        }),
-      });
+      // Use prefetched response if available (random discovery only)
+      let res: Response;
+      if (!searchName && prefetchRef.current) {
+        res = await prefetchRef.current;
+        prefetchRef.current = null;
+        prefetchedRef.current = false;
+      } else {
+        res = await fetch("/api/discover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            previousNames: seenNames,
+            ...(searchName && { searchName }),
+          }),
+        });
+      }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -206,7 +232,7 @@ export default function Home() {
 
   return (
     <main className="relative">
-      <Hero onDiscover={() => handleDiscover()} onSearch={(name) => handleDiscover(name)} isLoading={isLoading} />
+      <Hero onDiscover={() => handleDiscover()} onSearch={(name) => handleDiscover(name)} onPrefetch={handlePrefetch} isLoading={isLoading} />
 
       {/* Loading state */}
       {isLoading && (

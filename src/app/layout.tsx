@@ -15,7 +15,7 @@ const lora = Lora({
   variable: "--font-lora",
   subsets: ["latin"],
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700"],
   style: ["normal", "italic"],
 });
 
@@ -76,6 +76,9 @@ export default function RootLayout({
       <head>
         <meta name="theme-color" content="#F7F4EE" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1A1917" media="(prefers-color-scheme: dark)" />
+        <link rel="preconnect" href="https://image.tmdb.org" />
+        <link rel="preconnect" href="https://i.discogs.com" />
+        <link rel="dns-prefetch" href="https://i.ytimg.com" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -106,6 +109,9 @@ export default function RootLayout({
           data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
           strategy="afterInteractive"
         />
+        <Script id="sw-register" strategy="afterInteractive">
+          {`if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}`}
+        </Script>
       </body>
     </html>
   );

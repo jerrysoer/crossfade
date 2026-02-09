@@ -242,6 +242,17 @@ export async function getArtistReleases(
   return releases;
 }
 
+/**
+ * Search + get full artist details in one call — eliminates sequential waterfall.
+ */
+export async function searchAndGetArtist(
+  names: string | string[]
+): Promise<DiscogsArtist | null> {
+  const result = await searchArtist(names);
+  if (!result) return null;
+  return getArtist(result.id);
+}
+
 // ── URL/image builders ──
 
 export function artistImageUrl(artist: DiscogsArtist): string | null {
