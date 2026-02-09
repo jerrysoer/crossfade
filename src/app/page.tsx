@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 import Hero from "@/components/Hero";
 import Footer from "@/components/Footer";
 import LoadingState from "@/components/LoadingState";
@@ -10,6 +11,10 @@ import type { CrossoverArtist } from "@/lib/types";
 
 const CrossoverCard = dynamic(() => import("@/components/CrossoverCard"), {
   loading: () => <LoadingState />,
+});
+
+const SwipeFeed = dynamic(() => import("@/components/feed/SwipeFeed"), {
+  ssr: false,
 });
 
 function updateOgMeta(artist: CrossoverArtist | null) {
@@ -27,7 +32,9 @@ function updateOgMeta(artist: CrossoverArtist | null) {
   }
 }
 
-export default function Home() {
+// ── Desktop flow (existing behavior, unchanged) ──
+
+function DesktopHome() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<CrossoverArtist | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -41,7 +48,6 @@ export default function Home() {
     }
   });
 
-  // Persist seenNames to localStorage
   useEffect(() => {
     try {
       localStorage.setItem("cf:seen", JSON.stringify(seenNames));
@@ -50,7 +56,6 @@ export default function Home() {
     }
   }, [seenNames]);
 
-  // Hover-to-prefetch: start API call on mouseenter, use result on click
   const prefetchRef = useRef<Promise<Response> | null>(null);
   const prefetchedRef = useRef(false);
 
@@ -64,7 +69,6 @@ export default function Home() {
     });
   }, [isLoading, result, seenNames]);
 
-  // Restore result from URL hash on mount
   useEffect(() => {
     if (window.location.hash) {
       try {
@@ -89,7 +93,6 @@ export default function Home() {
     window.history.replaceState(null, "", "/");
 
     try {
-      // Use prefetched response if available (random discovery only)
       let res: Response;
       if (!searchName && prefetchRef.current) {
         res = await prefetchRef.current;
@@ -116,7 +119,6 @@ export default function Home() {
       const contentType = res.headers.get("content-type") || "";
 
       if (contentType.includes("text/x-ndjson") && res.body) {
-        // Streaming response — read NDJSON chunks
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -134,7 +136,6 @@ export default function Home() {
             try {
               const chunk = JSON.parse(line);
               if (chunk.phase === "header") {
-                // Show partial result immediately (no credits yet)
                 const partial: CrossoverArtist = {
                   name: chunk.name,
                   slug: chunk.slug,
@@ -172,7 +173,6 @@ export default function Home() {
           }
         }
       } else {
-        // JSON response (cache/queue hit)
         const artist: CrossoverArtist = await res.json();
         setResult(artist);
         setSeenNames((prev) => [...prev, artist.name]);
@@ -189,11 +189,9 @@ export default function Home() {
     }
   }
 
-  // Result view
   if (result) {
     return (
       <main className="relative min-h-screen">
-        {/* Nav bar */}
         <nav className="flex items-center justify-between px-6 py-5 max-w-7xl mx-auto relative z-10">
           <button
             onClick={() => {
@@ -221,7 +219,6 @@ export default function Home() {
           </div>
         </nav>
 
-        {/* Result */}
         <div className="pt-8 pb-24">
           <CrossoverCard artist={result} onTryAnother={() => handleDiscover()} isStreaming={isStreaming} />
         </div>
@@ -234,14 +231,12 @@ export default function Home() {
     <main className="relative">
       <Hero onDiscover={() => handleDiscover()} onSearch={(name) => handleDiscover(name)} onPrefetch={handlePrefetch} isLoading={isLoading} />
 
-      {/* Loading state */}
       {isLoading && (
         <div className="py-16">
           <LoadingState />
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="max-w-xl mx-auto px-6 py-8 text-center">
           <p className="text-[var(--accent-red)] text-sm mb-3">{error}</p>
@@ -257,4 +252,38 @@ export default function Home() {
       <Footer />
     </main>
   );
+}
+
+// ── Main component: routes desktop vs mobile ──
+
+export default function Home() {
+  const isDesktop = useIsDesktop();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // SSR and first render: show nothing briefly to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <main className="relative min-h-screen flex items-center justify-center">
+        <div className="flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-[var(--accent-red)]"
+              style={{ animation: `pulse-dot 1.2s ease-in-out ${i * 0.2}s infinite` }}
+            />
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  if (isDesktop) {
+    return <DesktopHome />;
+  }
+
+  return <SwipeFeed />;
 }
